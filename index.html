@@ -51,14 +51,13 @@
 </head>
 <body class="overflow-x-hidden">
 
-<!-- Navigation -->
-<nav id="mainNav" class="fixed top-0 w-full z-50 transition-all duration-300 py-6">
-    <div class="container mx-auto px-6 flex justify-between items-center">
-        <div class="flex items-center gap-3 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
-            <canvas id="logoCanvas"></canvas>
+<nav id="mainNav" class="fixed top-0 w-full z-50 transition-all duration-300 py-4 md:py-6">
+    <div class="container mx-auto px-4 md:px-6 flex justify-between items-center">
+        <div class="flex items-center gap-2 md:gap-3 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+            <canvas id="logoCanvas" class="w-8 h-8 md:w-12 md:h-12"></canvas>
             <div class="flex flex-col">
-                <span class="text-xl font-extrabold tracking-tighter text-cyan-600 leading-none">TECH MANTRA</span>
-                <span class="text-[9px] tracking-[0.3em] text-slate-400 font-bold uppercase mt-1">Career Academy</span>
+                <span class="text-lg md:text-xl font-extrabold tracking-tighter text-cyan-600 leading-none">TECH MANTRA</span>
+                <span class="text-[7px] md:text-[9px] tracking-[0.3em] text-slate-400 font-bold uppercase mt-1">Career Academy</span>
             </div>
         </div>
         
@@ -70,171 +69,150 @@
                 Free Audit
             </button>
         </div>
+        <button onclick="openModal('audit')" class="lg:hidden bg-cyan-600 text-white px-4 py-2 rounded-full text-xs font-bold">
+            Audit
+        </button>
     </div>
 </nav>
 
-<!-- Hero Section -->
-<header class="relative pt-48 pb-32 hero-gradient overflow-hidden">
+<header class="relative pt-32 pb-20 md:pt-48 md:pb-32 hero-gradient overflow-hidden">
     <div class="container mx-auto px-6 text-center relative z-10">
-        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-100 border border-cyan-200 text-cyan-700 text-xs font-black mb-8 animate-pulse">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-100 border border-cyan-200 text-cyan-700 text-[10px] md:text-xs font-black mb-6 md:mb-8 animate-pulse">
             <span>NEW</span> ⚡ MASTER DSA, WEB DEV & AI/ML
         </div>
-        <h1 class="text-5xl md:text-8xl font-extrabold text-slate-900 mb-6 leading-[1.1] tracking-tight">
-            Unlock Your <span class="text-cyan-600">High-Paying</span><br>Tech Career.
+        <h1 class="text-4xl md:text-7xl lg:text-8xl font-extrabold text-slate-900 mb-6 leading-[1.2] md:leading-[1.1] tracking-tight">
+            Unlock Your <span class="text-cyan-600">High-Paying</span><br class="hidden md:block"> Tech Career.
         </h1>
-        <p class="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
-            Personalized mentorship from industry experts. We don't just teach code; we build professional careers through referrals, mock interviews, and elite DSA training.
+        <p class="text-base md:text-xl text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+            Personalized mentorship from industry experts. We build professional careers through referrals and elite DSA training.
         </p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <button onclick="openModal('audit')" class="px-10 py-5 bg-slate-900 text-white font-bold rounded-2xl hover:scale-105 transition-transform shadow-2xl">
-                DM "JOB" For Free Profile Audit
+        <div class="flex flex-col sm:flex-row gap-4 justify-center px-4">
+            <button onclick="openModal('audit')" class="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 bg-slate-900 text-white font-bold rounded-2xl hover:scale-105 transition-transform shadow-2xl text-sm md:text-base">
+                DM "JOB" For Free Audit
             </button>
-            <a href="#dashboard" class="px-10 py-5 bg-white border border-slate-200 text-slate-900 font-bold rounded-2xl hover:bg-slate-50 transition-colors">
-                Explore Market Impact
+            <a href="#dashboard" class="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 bg-white border border-slate-200 text-slate-900 font-bold rounded-2xl hover:bg-slate-50 transition-colors text-sm md:text-base">
+                Explore Impact
             </a>
         </div>
     </div>
 </header>
 
-<!-- Market Dashboard Section -->
-<section id="dashboard" class="py-24 bg-white border-y border-slate-100">
+<section id="dashboard" class="py-16 md:py-24 bg-white border-y border-slate-100">
     <div class="container mx-auto px-6">
-        <div class="mb-16">
-            <h2 class="text-3xl md:text-5xl font-extrabold text-slate-900 mb-4">The Impact of Mentorship</h2>
-            <p class="text-slate-500 max-w-2xl text-lg">
-                This section analyzes the actual salary growth and placement success of Tech Mantra students compared to traditional self-learning paths.
+        <div class="mb-12 md:mb-16">
+            <h2 class="text-3xl md:text-5xl font-extrabold text-slate-900 mb-4">The Impact</h2>
+            <p class="text-slate-500 max-w-2xl text-base md:text-lg">
+                Analysis of salary growth compared to traditional self-learning.
             </p>
         </div>
 
-        <div class="grid lg:grid-cols-2 gap-12">
-            <div class="glass-panel p-8 rounded-[2rem] shadow-sm border border-slate-200">
-                <h3 class="text-xl font-bold mb-6 text-slate-800">Salary Transformation (LPA)</h3>
-                <div class="chart-container">
+        <div class="grid lg:grid-cols-2 gap-8 md:gap-12">
+            <div class="glass-panel p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-slate-200">
+                <h3 class="text-lg md:text-xl font-bold mb-6 text-slate-800">Salary Transformation (LPA)</h3>
+                <div class="relative h-[250px] md:h-[320px]">
                     <canvas id="salaryChart"></canvas>
                 </div>
-                <p class="text-sm text-slate-400 mt-6 italic">
-                    &#128200; Insight: Direct HR connections lead to a 140% faster salary jump compared to standard job applications.
-                </p>
             </div>
 
-            <div class="glass-panel p-8 rounded-[2rem] shadow-sm border border-slate-200">
-                <h3 class="text-xl font-bold mb-6 text-slate-800">Skill Mastery Profile</h3>
-                <div class="chart-container">
+            <div class="glass-panel p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-slate-200">
+                <h3 class="text-lg md:text-xl font-bold mb-6 text-slate-800">Skill Mastery Profile</h3>
+                <div class="relative h-[250px] md:h-[320px]">
                     <canvas id="skillRadarChart"></canvas>
                 </div>
-                <p class="text-sm text-slate-400 mt-6 italic">
-                    &#127919; Note: Our programs balance technical DSA skills with high-impact soft skills for HR interviews.
-                </p>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Curriculum Roadmap -->
-<section id="curriculum" class="py-24 bg-slate-50">
+<section id="curriculum" class="py-16 md:py-24 bg-slate-50">
     <div class="container mx-auto px-6">
-        <div class="text-center mb-16">
+        <div class="text-center mb-12 md:mb-16">
             <h2 class="text-3xl md:text-5xl font-extrabold text-slate-900 mb-4 uppercase tracking-tighter">Learn. Build. Get Hired.</h2>
-            <p class="text-slate-500 max-w-xl mx-auto">A data-driven curriculum designed to bridge the gap between academic learning and high-paying roles.</p>
         </div>
 
-        <div class="grid md:grid-cols-3 gap-8">
-            <div class="p-10 bg-white rounded-3xl border border-slate-200 hover:border-cyan-500 transition-all group">
-                <div id="iconBox1" class="w-16 h-16 bg-cyan-100 rounded-2xl mb-8 flex items-center justify-center text-cyan-600 font-black text-2xl group-hover:scale-110 transition-transform">01</div>
-                <h3 class="text-2xl font-black mb-4 uppercase">Advanced DSA</h3>
-                <p class="text-slate-500 leading-relaxed">Deep dive into competitive programming, complexities, and algorithmic patterns used by FAANG companies.</p>
+        <div class="grid md:grid-cols-3 gap-6 md:gap-8">
+            <div class="p-8 md:p-10 bg-white rounded-3xl border border-slate-200 hover:border-cyan-500 transition-all group">
+                <div class="w-12 h-12 md:w-16 md:h-16 bg-cyan-100 rounded-2xl mb-6 md:mb-8 flex items-center justify-center text-cyan-600 font-black text-xl md:text-2xl">01</div>
+                <h3 class="text-xl md:text-2xl font-black mb-4 uppercase">Advanced DSA</h3>
+                <p class="text-slate-500 text-sm md:text-base leading-relaxed">Deep dive into algorithmic patterns used by FAANG companies.</p>
             </div>
-            <div class="p-10 bg-white rounded-3xl border border-slate-200 hover:border-cyan-500 transition-all group">
-                <div id="iconBox2" class="w-16 h-16 bg-cyan-100 rounded-2xl mb-8 flex items-center justify-center text-cyan-600 font-black text-2xl group-hover:scale-110 transition-transform">02</div>
-                <h3 class="text-2xl font-black mb-4 uppercase">System Design</h3>
-                <p class="text-slate-500 leading-relaxed">Scalability, microservices, and high-level architecture. Essential for senior-level engineering roles.</p>
+            <div class="p-8 md:p-10 bg-white rounded-3xl border border-slate-200 hover:border-cyan-500 transition-all group">
+                <div class="w-12 h-12 md:w-16 md:h-16 bg-cyan-100 rounded-2xl mb-6 md:mb-8 flex items-center justify-center text-cyan-600 font-black text-xl md:text-2xl">02</div>
+                <h3 class="text-xl md:text-2xl font-black mb-4 uppercase">System Design</h3>
+                <p class="text-slate-500 text-sm md:text-base leading-relaxed">Scalability and microservices for senior engineering roles.</p>
             </div>
-            <div class="p-10 bg-white rounded-3xl border border-slate-200 hover:border-cyan-500 transition-all group">
-                <div id="iconBox3" class="w-16 h-16 bg-cyan-100 rounded-2xl mb-8 flex items-center justify-center text-cyan-600 font-black text-2xl group-hover:scale-110 transition-transform">03</div>
-                <h3 class="text-2xl font-black mb-4 uppercase">HR Connect</h3>
-                <p class="text-slate-500 leading-relaxed">Resume reviews, mock interviews, and direct networking with top-tier hiring managers and referrals.</p>
+            <div class="p-8 md:p-10 bg-white rounded-3xl border border-slate-200 hover:border-cyan-500 transition-all group">
+                <div class="w-12 h-12 md:w-16 md:h-16 bg-cyan-100 rounded-2xl mb-6 md:mb-8 flex items-center justify-center text-cyan-600 font-black text-xl md:text-2xl">03</div>
+                <h3 class="text-xl md:text-2xl font-black mb-4 uppercase">HR Connect</h3>
+                <p class="text-slate-500 text-sm md:text-base leading-relaxed">Resume reviews and direct networking with hiring managers.</p>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Pricing Matrix -->
-<section id="pricing" class="py-32 bg-white">
+<section id="pricing" class="py-20 md:py-32 bg-white">
     <div class="container mx-auto px-6">
-        <div class="text-center mb-20">
-            <h2 class="text-4xl md:text-6xl font-black text-slate-900 mb-6 tracking-tighter">MENTORSHIP PROGRAMS</h2>
-            <p class="text-slate-500 max-w-xl mx-auto text-lg">Investment in yourself is the only investment with guaranteed returns.</p>
+        <div class="text-center mb-12 md:mb-20">
+            <h2 class="text-3xl md:text-6xl font-black text-slate-900 mb-6 tracking-tighter">PROGRAMS</h2>
         </div>
 
-        <div class="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            <!-- Tier 1 -->
-            <div class="p-10 rounded-[2.5rem] border-2 border-slate-100 flex flex-col hover:border-slate-200 transition-all group">
-                <h3 class="text-2xl font-black text-slate-800 mb-4">Standard</h3>
-                <div class="text-5xl font-black text-slate-900 mb-8">Base</div>
-                <ul class="space-y-4 mb-12 flex-grow">
-                    <li class="flex items-center gap-3 font-semibold text-slate-600 text-sm">&#10003; 1 Free Resume Review</li>
-                    <li class="flex items-center gap-3 font-semibold text-slate-600 text-sm">&#10003; 1 Free Mock Interview</li>
-                    <li class="flex items-center gap-3 font-semibold text-slate-600 text-sm">&#10003; LinkedIn Profile Review</li>
-                    <li class="flex items-center gap-3 font-semibold text-slate-600 text-sm">&#10003; Performance Feedback</li>
+        <div class="grid lg:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
+            <div class="p-8 md:p-10 rounded-[2rem] border-2 border-slate-100 flex flex-col">
+                <h3 class="text-xl font-black text-slate-800 mb-2">Standard</h3>
+                <div class="text-4xl font-black text-slate-900 mb-6">Base</div>
+                <ul class="space-y-3 mb-8 flex-grow text-sm">
+                    <li>&#10003; 1 Free Resume Review</li>
+                    <li>&#10003; 1 Free Mock Interview</li>
+                    <li>&#10003; Profile Review</li>
                 </ul>
-                <button onclick="openModal('enroll')" class="w-full py-5 bg-slate-100 text-slate-800 font-black rounded-2xl uppercase tracking-widest text-sm hover:bg-slate-200 transition-colors">Start Free</button>
+                <button onclick="openModal('enroll')" class="w-full py-4 bg-slate-100 text-slate-800 font-black rounded-xl text-xs uppercase tracking-widest">Start Free</button>
             </div>
 
-            <!-- Tier 2 -->
-            <div class="relative p-10 rounded-[2.5rem] border-2 border-cyan-500 bg-slate-900 flex flex-col shadow-2xl shadow-cyan-900/40 hover:-translate-y-2 transition-all">
-                <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-cyan-500 text-white text-[10px] font-black px-6 py-2 rounded-full uppercase tracking-widest">Most Popular</div>
-                <h3 class="text-2xl font-black text-white mb-4">Career Pro</h3>
-                <div class="text-5xl font-black text-white mb-8">Referral</div>
-                <ul class="space-y-4 mb-12 flex-grow">
-                    <li class="flex items-center gap-3 font-semibold text-slate-300 text-sm">&#10003; Everything in Standard</li>
-                    <li class="flex items-center gap-3 font-semibold text-slate-300 text-sm">&#10003; Direct HR Connects</li>
-                    <li class="flex items-center gap-3 font-semibold text-slate-300 text-sm">&#10003; Direct Referrals</li>
-                    <li class="flex items-center gap-3 font-semibold text-slate-300 text-sm">&#10003; Salary Negotiation Prep</li>
+            <div class="relative p-8 md:p-10 rounded-[2rem] border-2 border-cyan-500 bg-slate-900 flex flex-col shadow-2xl lg:-translate-y-4">
+                <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-cyan-500 text-white text-[10px] font-black px-6 py-2 rounded-full uppercase">Most Popular</div>
+                <h3 class="text-xl font-black text-white mb-2">Career Pro</h3>
+                <div class="text-4xl font-black text-white mb-6">Referral</div>
+                <ul class="space-y-3 mb-8 flex-grow text-sm text-slate-300">
+                    <li>&#10003; Direct HR Connects</li>
+                    <li>&#10003; Direct Referrals</li>
+                    <li>&#10003; Salary Negotiation</li>
                 </ul>
-                <button onclick="openModal('enroll')" class="w-full py-5 bg-cyan-600 text-white font-black rounded-2xl uppercase tracking-widest text-sm hover:bg-cyan-500 transition-all">Get Pro</button>
+                <button onclick="openModal('enroll')" class="w-full py-4 bg-cyan-600 text-white font-black rounded-xl text-xs uppercase tracking-widest">Get Pro</button>
             </div>
 
-            <!-- Tier 3 -->
-            <div class="p-10 rounded-[2.5rem] border-2 border-slate-100 flex flex-col hover:border-slate-200 transition-all group">
-                <h3 class="text-2xl font-black text-slate-800 mb-4">Tech Mastery</h3>
-                <div class="text-5xl font-black text-slate-900 mb-8">Elite</div>
-                <ul class="space-y-4 mb-12 flex-grow">
-                    <li class="flex items-center gap-3 font-semibold text-slate-600 text-sm">&#10003; Everything in Pro</li>
-                    <li class="flex items-center gap-3 font-semibold text-slate-600 text-sm">&#10003; Full DSA Coaching</li>
-                    <li class="flex items-center gap-3 font-semibold text-slate-600 text-sm">&#10003; System Design Training</li>
-                    <li class="flex items-center gap-3 font-semibold text-slate-600 text-sm">&#10003; AI/ML Specialization</li>
+            <div class="p-8 md:p-10 rounded-[2rem] border-2 border-slate-100 flex flex-col">
+                <h3 class="text-xl font-black text-slate-800 mb-2">Tech Mastery</h3>
+                <div class="text-4xl font-black text-slate-900 mb-6">Elite</div>
+                <ul class="space-y-3 mb-8 flex-grow text-sm">
+                    <li>&#10003; Everything in Pro</li>
+                    <li>&#10003; Full DSA Coaching</li>
+                    <li>&#10003; AI/ML Specialization</li>
                 </ul>
-                <button onclick="openModal('enroll')" class="w-full py-5 bg-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-sm hover:bg-slate-700 transition-colors">Master Mastery</button>
+                <button onclick="openModal('enroll')" class="w-full py-4 bg-slate-800 text-white font-black rounded-xl text-xs uppercase tracking-widest">Master Elite</button>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Community Section -->
-<section class="py-24 bg-slate-900 text-white">
+<section class="py-20 md:py-24 bg-slate-900 text-white">
     <div class="container mx-auto px-6 text-center">
-        <h2 class="text-4xl md:text-7xl font-black mb-10 tracking-tighter">FOLLOW THE MANTRA.</h2>
-        <p class="text-slate-400 max-w-2xl mx-auto mb-16 text-lg">Join our Instagram community for daily DSA tips, interview cheat sheets, and success stories.</p>
-        <a href="https://www.instagram.com/tech.mantra.dsa" target="_blank" class="inline-flex items-center gap-4 px-12 py-6 bg-white text-slate-950 font-black rounded-2xl hover:scale-105 transition-transform">
+        <h2 class="text-4xl md:text-7xl font-black mb-8 tracking-tighter">FOLLOW THE MANTRA.</h2>
+        <a href="https://www.instagram.com/tech.mantra.dsa" target="_blank" class="inline-flex items-center gap-4 px-8 md:px-12 py-5 md:py-6 bg-white text-slate-950 font-black rounded-2xl hover:scale-105 transition-transform text-sm md:text-base">
             @TECH.MANTRA.DSA &#8599;
         </a>
     </div>
 </section>
 
-<!-- Footer -->
-<footer class="py-12 bg-white border-t border-slate-100 text-center">
-    <p class="text-slate-400 font-bold text-xs tracking-widest uppercase">© 2024 Tech Mantra Career Academy. All Rights Reserved.</p>
+<footer class="py-8 bg-white border-t border-slate-100 text-center px-6">
+    <p class="text-slate-400 font-bold text-[10px] md:text-xs tracking-widest uppercase">© 2024 Tech Mantra Career Academy.</p>
 </footer>
 
-<!-- Interactive Modal -->
-<div id="actionModal" class="fixed inset-0 z-[100] flex items-center justify-center px-6 hidden transition-all duration-300">
+<div id="actionModal" class="fixed inset-0 z-[100] flex items-center justify-center px-4 hidden">
     <div class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm" onclick="closeModal()"></div>
-    <div class="relative bg-white w-full max-w-md p-10 rounded-[2.5rem] shadow-3xl text-center transform scale-95 transition-transform duration-300" id="modalContent">
-        <button onclick="closeModal()" class="absolute top-6 right-6 text-slate-400 hover:text-slate-950 transition-colors text-2xl">&times;</button>
-        <div id="modalVisual" class="w-20 h-20 bg-cyan-100 rounded-3xl mx-auto mb-8 flex items-center justify-center text-3xl">🚀</div>
-        <h3 id="modalTitle" class="text-3xl font-black text-slate-900 mb-4 uppercase">Let's audit.</h3>
-        <p id="modalDesc" class="text-slate-500 mb-10 leading-relaxed font-medium">Ready to transform? DM us "JOB" on Instagram for a free profile audit and resume review session.</p>
-        <a href="https://www.instagram.com/tech.mantra.dsa" target="_blank" class="w-full block py-5 bg-cyan-600 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-sm hover:bg-cyan-500 transition-colors">Go to Instagram</a>
+    <div class="relative bg-white w-full max-w-sm md:max-w-md p-8 md:p-10 rounded-[2rem] text-center" id="modalContent">
+        <h3 id="modalTitle" class="text-2xl md:text-3xl font-black text-slate-900 mb-4">Let's audit.</h3>
+        <p id="modalDesc" class="text-sm md:text-base text-slate-500 mb-8">DM us "JOB" on Instagram for a free profile audit.</p>
+        <a href="https://www.instagram.com/tech.mantra.dsa" target="_blank" class="w-full block py-4 bg-cyan-600 text-white font-black rounded-xl text-xs uppercase tracking-widest">Go to Instagram</a>
     </div>
 </div>
 
