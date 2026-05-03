@@ -7,6 +7,129 @@
 <title>Tech Mantra Academy | Learn. Build. Get Hired.</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+(function() {
+  // 1. Create the Floating Action Button (FAB)
+  const fab = document.createElement('div');
+  fab.innerHTML = '💬';
+  Object.assign(fab.style, {
+    position: 'fixed',
+    bottom: '20px',
+    right: '20px',
+    width: '50px',
+    height: '50px',
+    borderRadius: '25px',
+    backgroundColor: '#171717',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '24px',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    cursor: 'pointer',
+    zIndex: '999999'
+  });
+  
+  // Optional: Add a simple click event to the FAB 
+  fab.addEventListener('click', () => alert('VibeCheck Active! Highlight text to leave feedback.'));
+  document.body.appendChild(fab);
+
+  // 2. Create the Emoji Reaction Bar
+  const reactionBar = document.createElement('div');
+  reactionBar.innerHTML = '<span>🔥</span><span>👍</span><span>👎</span>';
+  Object.assign(reactionBar.style, {
+    position: 'absolute',
+    backgroundColor: '#ffffff',
+    border: '1px solid #e5e5e5',
+    borderRadius: '8px',
+    padding: '6px 12px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    display: 'none',
+    gap: '12px',
+    zIndex: '999999',
+    fontSize: '20px'
+  });
+  
+  // Style the individual emojis
+  const emojis = reactionBar.querySelectorAll('span');
+  emojis.forEach(emoji => {
+    emoji.style.cursor = 'pointer';
+    emoji.style.transition = 'transform 0.2s';
+    emoji.onmouseover = () => emoji.style.transform = 'scale(1.2)';
+    emoji.onmouseout = () => emoji.style.transform = 'scale(1)';
+  });
+  document.body.appendChild(reactionBar);
+
+  let currentSelection = '';
+  let currentParentElement = null;
+
+  // Helper: Generate a robust CSS selector path for an element
+  function getCssSelector(el) {
+    if (!(el instanceof Element)) return;
+    const path = [];
+    while (el.nodeType === Node.ELEMENT_NODE) {
+      let selector = el.nodeName.toLowerCase();
+      if (el.id) {
+        selector += '#' + el.id;
+        path.unshift(selector);
+        break; // IDs are unique, we can stop here
+      } else {
+        let sib = el, nth = 1;
+        while (sib = sib.previousElementSibling) {
+          if (sib.nodeName.toLowerCase() == selector) nth++;
+        }
+        if (nth != 1) selector += ":nth-of-type(" + nth + ")";
+      }
+      path.unshift(selector);
+      el = el.parentNode;
+    }
+    return path.join(" > ");
+  }
+
+  // 3. Listen for Text Highlights (using mouseup to detect when selection ends)
+  document.addEventListener('mouseup', function(e) {
+    // Ignore clicks inside the reaction bar itself
+    if (reactionBar.contains(e.target)) return;
+
+    const selection = window.getSelection();
+    const text = selection.toString().trim();
+
+    if (text.length > 0) {
+      currentSelection = text;
+      // Get the parent element of the highlighted text
+      currentParentElement = selection.anchorNode.parentElement;
+
+      // Calculate position above the highlighted text
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+
+      reactionBar.style.display = 'flex';
+      // Center the bar above the text, accounting for scroll position
+      reactionBar.style.top = (window.scrollY + rect.top - 50) + 'px';
+      reactionBar.style.left = (window.scrollX + rect.left + (rect.width / 2) - (reactionBar.offsetWidth / 2)) + 'px'; 
+    } else {
+      reactionBar.style.display = 'none';
+    }
+  });
+
+  // 4. Handle Emoji Clicks
+  emojis.forEach(emoji => {
+    emoji.addEventListener('click', function(e) {
+      e.stopPropagation(); // Prevent the click from instantly hiding the bar via document listeners
+      
+      console.group('VibeCheck Feedback Captured');
+      console.log("Reaction:", this.innerText);
+      console.log("Selected Text:", currentSelection);
+      console.log("Parent CSS Selector:", getCssSelector(currentParentElement));
+      console.groupEnd();
+
+      // Clean up UI after submission
+      reactionBar.style.display = 'none';
+      window.getSelection().removeAllRanges();
+    });
+  });
+})();
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
 
