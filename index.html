@@ -9,119 +9,177 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // 1. Create the Floating Action Button (FAB)
+  // --- 1. STATE MANAGEMENT ---
+  const state = {
+    targetElement: null,
+    selectedText: '',
+    selectedEmoji: null
+  };
+
+  // --- 2. DOM PATH GENERATOR (From PRD Phase 1/Prompt 2) ---
+  function generateResilientPath(element) {
+    if (!element || !(element instanceof Element)) return null;
+    const getDirectText = (el) => Array.from(el.childNodes)
+      .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent.trim())
+      .join(' ').replace(/\s+/g, ' ').substring(0, 60);
+
+    const pathData = {
+      target: {
+        tagName: element.tagName.toLowerCase(),
+        id: element.id || null,
+        className: element.className || null,
+        textNode: getDirectText(element),
+        src: element.src || null
+      },
+      ancestry: []
+    };
+
+    let current = element.parentElement;
+    let depth = 0;
+    while (current && depth < 4) {
+      pathData.ancestry.push({
+        tagName: current.tagName.toLowerCase(),
+        id: current.id || null,
+        className: current.className || null
+      });
+      if (current.id) break;
+      current = current.parentElement;
+      depth++;
+    }
+    return JSON.stringify(pathData);
+  }
+
+  // --- 3. UI CREATION ---
+  
+  // Create FAB
   const fab = document.createElement('div');
   fab.innerHTML = '💬';
   Object.assign(fab.style, {
-    position: 'fixed',
-    bottom: '20px',
-    right: '20px',
-    width: '50px',
-    height: '50px',
-    borderRadius: '25px',
-    backgroundColor: '#171717',
-    color: 'white',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '24px',
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    cursor: 'pointer',
-    zIndex: '999999'
+    position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px',
+    borderRadius: '25px', backgroundColor: '#171717', color: 'white', display: 'flex',
+    alignItems: 'center', justifyContent: 'center', fontSize: '24px', 
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)', cursor: 'pointer', zIndex: '999999'
   });
-  
-  fab.addEventListener('click', () => alert('VibeCheck Active! Highlight text to leave feedback.'));
+  fab.addEventListener('click', () => alert('Highlight text or right-click an image to leave feedback!'));
   document.body.appendChild(fab);
 
-  // 2. Create the Emoji Reaction Bar
-  const reactionBar = document.createElement('div');
-  reactionBar.innerHTML = '<span>🔥</span><span>👍</span><span>👎</span>';
-  Object.assign(reactionBar.style, {
-    position: 'absolute',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e5e5e5',
-    borderRadius: '8px',
-    padding: '6px 12px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-    display: 'none',
-    gap: '12px',
-    zIndex: '999999',
-    fontSize: '20px'
+  // Create Feedback Popup (Emojis + Textarea + Submit)
+  const popup = document.createElement('div');
+  popup.innerHTML = `
+    <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 10px;" id="vc-emojis">
+      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">🔥</span>
+      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">👍</span>
+      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">👎</span>
+    </div>
+    <textarea id="vc-text" placeholder="Tell us more? (optional)" style="width: 100%; height: 50px; border: 1px solid #ccc; border-radius: 4px; padding: 6px; font-size: 12px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: inherit;"></textarea>
+    <button id="vc-submit" style="width: 100%; background: #171717; color: white; border: none; border-radius: 4px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px;">Send Feedback</button>
+  `;
+  Object.assign(popup.style, {
+    position: 'absolute', backgroundColor: '#ffffff', border: '1px solid #e5e5e5',
+    borderRadius: '8px', padding: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+    display: 'none', flexDirection: 'column', width: '200px', zIndex: '999999'
   });
-  
-  const emojis = reactionBar.querySelectorAll('span');
-  emojis.forEach(emoji => {
-    emoji.style.cursor = 'pointer';
-    emoji.style.transition = 'transform 0.2s';
-    emoji.onmouseover = () => emoji.style.transform = 'scale(1.2)';
-    emoji.onmouseout = () => emoji.style.transform = 'scale(1)';
-  });
-  document.body.appendChild(reactionBar);
+  document.body.appendChild(popup);
 
-  let currentSelection = '';
-  let currentParentElement = null;
+  // --- 4. EVENT LISTENERS ---
 
-  // Helper: Generate a robust CSS selector path for an element
-  function getCssSelector(el) {
-    if (!(el instanceof Element)) return;
-    const path = [];
-    while (el.nodeType === Node.ELEMENT_NODE) {
-      let selector = el.nodeName.toLowerCase();
-      if (el.id) {
-        selector += '#' + el.id;
-        path.unshift(selector);
-        break; 
-      } else {
-        let sib = el, nth = 1;
-        while (sib = sib.previousElementSibling) {
-          if (sib.nodeName.toLowerCase() == selector) nth++;
-        }
-        if (nth != 1) selector += ":nth-of-type(" + nth + ")";
-      }
-      path.unshift(selector);
-      el = el.parentNode;
+  // Close popup if clicking outside
+  document.addEventListener('mousedown', (e) => {
+    if (popup.style.display === 'flex' && !popup.contains(e.target) && !fab.contains(e.target)) {
+      popup.style.display = 'none';
+      window.getSelection().removeAllRanges();
     }
-    return path.join(" > ");
-  }
+  });
 
-  // 3. Listen for Text Highlights 
+  // Highlight Selection (Text)
   document.addEventListener('mouseup', function(e) {
-    if (reactionBar.contains(e.target)) return;
+    if (popup.contains(e.target)) return;
 
     const selection = window.getSelection();
     const text = selection.toString().trim();
 
     if (text.length > 0) {
-      currentSelection = text;
-      currentParentElement = selection.anchorNode.parentElement;
-
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-
-      reactionBar.style.display = 'flex';
-      reactionBar.style.top = (window.scrollY + rect.top - 50) + 'px';
-      reactionBar.style.left = (window.scrollX + rect.left + (rect.width / 2) - (reactionBar.offsetWidth / 2)) + 'px'; 
-    } else {
-      reactionBar.style.display = 'none';
+      state.selectedText = text;
+      state.targetElement = selection.anchorNode.parentElement;
+      
+      const rect = selection.getRangeAt(0).getBoundingClientRect();
+      showPopup(window.scrollX + rect.left + (rect.width / 2) - 112, window.scrollY + rect.top - 160);
     }
   });
 
-  // 4. Handle Emoji Clicks
-  emojis.forEach(emoji => {
-    emoji.addEventListener('click', function(e) {
-      e.stopPropagation(); 
+  // Right-Click Context Menu (Images only, per PRD)
+  document.addEventListener('contextmenu', function(e) {
+    if (e.target.tagName.toLowerCase() === 'img') {
+      e.preventDefault(); // Stop standard browser right-click menu
+      state.selectedText = '[Image Element]';
+      state.targetElement = e.target;
       
-      console.group('VibeCheck Feedback Captured');
-      console.log("Reaction:", this.innerText);
-      console.log("Selected Text:", currentSelection);
-      console.log("Parent CSS Selector:", getCssSelector(currentParentElement));
-      console.groupEnd();
+      // Show popup right at the cursor
+      showPopup(e.pageX, e.pageY);
+    }
+  });
 
-      reactionBar.style.display = 'none';
-      window.getSelection().removeAllRanges();
+  // UI Helper: Show & Reset Popup
+  function showPopup(left, top) {
+    popup.style.display = 'flex';
+    popup.style.top = top + 'px';
+    popup.style.left = left + 'px';
+    
+    // Reset state and UI
+    state.selectedEmoji = null;
+    document.getElementById('vc-text').value = '';
+    document.querySelectorAll('.vc-emoji').forEach(el => {
+      el.style.transform = 'scale(1)';
+      el.style.opacity = '1';
+    });
+  }
+
+  // Emoji Selection Logic
+  document.querySelectorAll('.vc-emoji').forEach(emoji => {
+    emoji.addEventListener('click', function(e) {
+      state.selectedEmoji = this.innerText;
+      
+      // Visual feedback for selection
+      document.querySelectorAll('.vc-emoji').forEach(el => {
+        el.style.transform = 'scale(0.8)';
+        el.style.opacity = '0.5';
+      });
+      this.style.transform = 'scale(1.3)';
+      this.style.opacity = '1';
     });
   });
-}); // End DOMContentLoaded
+
+  // Submit Logic
+  document.getElementById('vc-submit').addEventListener('click', () => {
+    const textNote = document.getElementById('vc-text').value.trim();
+    
+    if (!state.selectedEmoji && !textNote) {
+      alert("Please select an emoji or write a note.");
+      return;
+    }
+
+    const payload = {
+      feedback_type: state.selectedEmoji && textNote ? 'both' : (state.selectedEmoji ? 'emoji' : 'text'),
+      emoji: state.selectedEmoji,
+      content: textNote,
+      highlighted_text: state.selectedText,
+      element_metadata: generateResilientPath(state.targetElement)
+    };
+
+    console.group('🔥 VibeCheck Payload Ready for Supabase 🔥');
+    console.log(JSON.stringify(payload, null, 2));
+    console.groupEnd();
+
+    // Clean up
+    popup.style.display = 'none';
+    window.getSelection().removeAllRanges();
+    
+    // Optional: Flash a success message on the FAB
+    const oldFabHtml = fab.innerHTML;
+    fab.innerHTML = '✅';
+    setTimeout(() => fab.innerHTML = oldFabHtml, 2000);
+  });
+});
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
