@@ -7,8 +7,8 @@
 <title>Tech Mantra Academy | Learn. Build. Get Hired.</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-(function() {
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
   // 1. Create the Floating Action Button (FAB)
   const fab = document.createElement('div');
   fab.innerHTML = '💬';
@@ -30,7 +30,6 @@
     zIndex: '999999'
   });
   
-  // Optional: Add a simple click event to the FAB 
   fab.addEventListener('click', () => alert('VibeCheck Active! Highlight text to leave feedback.'));
   document.body.appendChild(fab);
 
@@ -50,7 +49,6 @@
     fontSize: '20px'
   });
   
-  // Style the individual emojis
   const emojis = reactionBar.querySelectorAll('span');
   emojis.forEach(emoji => {
     emoji.style.cursor = 'pointer';
@@ -72,7 +70,7 @@
       if (el.id) {
         selector += '#' + el.id;
         path.unshift(selector);
-        break; // IDs are unique, we can stop here
+        break; 
       } else {
         let sib = el, nth = 1;
         while (sib = sib.previousElementSibling) {
@@ -86,9 +84,8 @@
     return path.join(" > ");
   }
 
-  // 3. Listen for Text Highlights (using mouseup to detect when selection ends)
+  // 3. Listen for Text Highlights 
   document.addEventListener('mouseup', function(e) {
-    // Ignore clicks inside the reaction bar itself
     if (reactionBar.contains(e.target)) return;
 
     const selection = window.getSelection();
@@ -96,15 +93,12 @@
 
     if (text.length > 0) {
       currentSelection = text;
-      // Get the parent element of the highlighted text
       currentParentElement = selection.anchorNode.parentElement;
 
-      // Calculate position above the highlighted text
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
 
       reactionBar.style.display = 'flex';
-      // Center the bar above the text, accounting for scroll position
       reactionBar.style.top = (window.scrollY + rect.top - 50) + 'px';
       reactionBar.style.left = (window.scrollX + rect.left + (rect.width / 2) - (reactionBar.offsetWidth / 2)) + 'px'; 
     } else {
@@ -115,7 +109,7 @@
   // 4. Handle Emoji Clicks
   emojis.forEach(emoji => {
     emoji.addEventListener('click', function(e) {
-      e.stopPropagation(); // Prevent the click from instantly hiding the bar via document listeners
+      e.stopPropagation(); 
       
       console.group('VibeCheck Feedback Captured');
       console.log("Reaction:", this.innerText);
@@ -123,12 +117,11 @@
       console.log("Parent CSS Selector:", getCssSelector(currentParentElement));
       console.groupEnd();
 
-      // Clean up UI after submission
       reactionBar.style.display = 'none';
       window.getSelection().removeAllRanges();
     });
   });
-})();
+}); // End DOMContentLoaded
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
