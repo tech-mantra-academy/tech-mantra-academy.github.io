@@ -7,16 +7,20 @@
 <title>Tech Mantra Academy | Learn. Build. Get Hired.</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
+ <script>
 document.addEventListener('DOMContentLoaded', function() {
   // --- 1. STATE MANAGEMENT ---
   const state = {
     targetElement: null,
     selectedText: '',
-    selectedEmoji: null
+    selectedEmoji: null,
+    isInspectMode: false,
+    hoveredElement: null,
+    originalOutline: '',
+    originalCursor: ''
   };
 
-  // --- 2. DOM PATH GENERATOR (From PRD Phase 1/Prompt 2) ---
+  // --- 2. DOM PATH GENERATOR ---
   function generateResilientPath(element) {
     if (!element || !(element instanceof Element)) return null;
     const getDirectText = (el) => Array.from(el.childNodes)
@@ -38,9 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let depth = 0;
     while (current && depth < 4) {
       pathData.ancestry.push({
-        tagName: current.tagName.toLowerCase(),
-        id: current.id || null,
-        className: current.className || null
+        tagName: current.tagName.toLowerCase(), id: current.id || null, className: current.className || null
       });
       if (current.id) break;
       current = current.parentElement;
@@ -50,7 +52,9 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // --- 3. UI CREATION ---
-  
+  const zIndex = '999999';
+  const fontFamily = 'system-ui, -apple-system, sans-serif';
+
   // Create FAB
   const fab = document.createElement('div');
   fab.innerHTML = '💬';
@@ -58,107 +62,210 @@ document.addEventListener('DOMContentLoaded', function() {
     position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px',
     borderRadius: '25px', backgroundColor: '#171717', color: 'white', display: 'flex',
     alignItems: 'center', justifyContent: 'center', fontSize: '24px', 
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)', cursor: 'pointer', zIndex: '999999'
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', zIndex: zIndex, transition: 'transform 0.2s'
   });
-  fab.addEventListener('click', () => alert('Highlight text or right-click an image to leave feedback!'));
+  fab.onmouseover = () => fab.style.transform = 'scale(1.05)';
+  fab.onmouseout = () => fab.style.transform = 'scale(1)';
   document.body.appendChild(fab);
 
-  // Create Feedback Popup (Emojis + Textarea + Submit)
+  // Create FAB Menu (General Feedback & Instructions)
+  const fabMenu = document.createElement('div');
+  fabMenu.innerHTML = `
+    <div style="font-family: ${fontFamily};">
+      <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #111;">Site Feedback</h4>
+      <textarea id="vc-gen-text" placeholder="What do you think of this page? (Anonymous)" style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: inherit;"></textarea>
+      <button id="vc-gen-submit" style="width: 100%; background: #171717; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; margin-bottom: 12px;">Send General Feedback</button>
+      
+      <hr style="border: 0; border-top: 1px solid #eee; margin: 0 0 12px 0;">
+      
+      <p style="font-size: 12px; color: #555; margin: 0 0 12px 0; line-height: 1.4;">
+        <strong>💡 Tip:</strong> Highlight any text or right-click any image to leave specific feedback on it.
+      </p>
+      
+      <button id="vc-inspect-btn" style="width: 100%; background: #f0f0f0; color: #111; border: 1px solid #ddd; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; display: flex; justify-content: center; align-items: center; gap: 6px;">
+        <span>🔍</span> Enter Inspect Mode
+      </button>
+    </div>
+  `;
+  Object.assign(fabMenu.style, {
+    position: 'fixed', bottom: '85px', right: '20px', width: '280px', backgroundColor: '#ffffff', 
+    border: '1px solid #e5e5e5', borderRadius: '12px', padding: '16px', 
+    boxShadow: '0 8px 30px rgba(0,0,0,0.12)', display: 'none', zIndex: zIndex
+  });
+  document.body.appendChild(fabMenu);
+
+  // Create Element Feedback Popup (Emojis + Textarea)
   const popup = document.createElement('div');
   popup.innerHTML = `
-    <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 10px;" id="vc-emojis">
-      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">🔥</span>
-      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">👍</span>
-      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">👎</span>
+    <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 12px;" id="vc-emojis">
+      <span class="vc-emoji" style="cursor:pointer; font-size:24px; transition: transform 0.2s;">🔥</span>
+      <span class="vc-emoji" style="cursor:pointer; font-size:24px; transition: transform 0.2s;">👍</span>
+      <span class="vc-emoji" style="cursor:pointer; font-size:24px; transition: transform 0.2s;">👎</span>
     </div>
-    <textarea id="vc-text" placeholder="Tell us more? (optional)" style="width: 100%; height: 50px; border: 1px solid #ccc; border-radius: 4px; padding: 6px; font-size: 12px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: inherit;"></textarea>
-    <button id="vc-submit" style="width: 100%; background: #171717; color: white; border: none; border-radius: 4px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px;">Send Feedback</button>
+    <textarea id="vc-text" placeholder="Tell us more? (optional)" style="width: 100%; height: 50px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: ${fontFamily};"></textarea>
+    <button id="vc-submit" style="width: 100%; background: #171717; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; font-family: ${fontFamily};">Submit</button>
   `;
   Object.assign(popup.style, {
     position: 'absolute', backgroundColor: '#ffffff', border: '1px solid #e5e5e5',
-    borderRadius: '8px', padding: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-    display: 'none', flexDirection: 'column', width: '200px', zIndex: '999999'
+    borderRadius: '12px', padding: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+    display: 'none', flexDirection: 'column', width: '220px', zIndex: zIndex
   });
   document.body.appendChild(popup);
 
-  // --- 4. EVENT LISTENERS ---
+  // --- 4. CORE LOGIC & EVENT LISTENERS ---
 
-  // Close popup if clicking outside
+  // UI Helpers
+  function closeAllMenus() {
+    fabMenu.style.display = 'none';
+    popup.style.display = 'none';
+    if (state.isInspectMode) toggleInspectMode();
+    window.getSelection().removeAllRanges();
+  }
+
+  function showPopup(left, top) {
+    fabMenu.style.display = 'none';
+    popup.style.display = 'flex';
+    popup.style.top = top + 'px';
+    // Prevent clipping off right side of screen
+    popup.style.left = Math.min(left, window.innerWidth - 250) + 'px'; 
+    state.selectedEmoji = null;
+    document.getElementById('vc-text').value = '';
+    document.querySelectorAll('.vc-emoji').forEach(el => { el.style.transform = 'scale(1)'; el.style.opacity = '1'; });
+  }
+
+  // Flash Success Animation
+  function flashSuccess() {
+    const oldHtml = fab.innerHTML;
+    fab.innerHTML = '✅';
+    fab.style.backgroundColor = '#10b981';
+    setTimeout(() => {
+      fab.innerHTML = oldHtml;
+      fab.style.backgroundColor = '#171717';
+    }, 2000);
+  }
+
+  // FAB Click
+  fab.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (state.isInspectMode) return toggleInspectMode(); // If inspecting, cancel it
+    popup.style.display = 'none';
+    fabMenu.style.display = fabMenu.style.display === 'block' ? 'none' : 'block';
+  });
+
+  // Close menus on outside click
   document.addEventListener('mousedown', (e) => {
-    if (popup.style.display === 'flex' && !popup.contains(e.target) && !fab.contains(e.target)) {
-      popup.style.display = 'none';
-      window.getSelection().removeAllRanges();
+    if (!fab.contains(e.target) && !fabMenu.contains(e.target) && !popup.contains(e.target)) {
+      if (!state.isInspectMode) closeAllMenus();
     }
   });
 
-  // Highlight Selection (Text)
+  // --- SPECIFIC FEEDBACK HANDLERS ---
+  
+  // Highlight Selection
   document.addEventListener('mouseup', function(e) {
-    if (popup.contains(e.target)) return;
-
+    if (popup.contains(e.target) || fabMenu.contains(e.target) || state.isInspectMode) return;
     const selection = window.getSelection();
     const text = selection.toString().trim();
-
     if (text.length > 0) {
       state.selectedText = text;
       state.targetElement = selection.anchorNode.parentElement;
-      
       const rect = selection.getRangeAt(0).getBoundingClientRect();
-      showPopup(window.scrollX + rect.left + (rect.width / 2) - 112, window.scrollY + rect.top - 160);
+      showPopup(window.scrollX + rect.left + (rect.width / 2) - 110, window.scrollY + rect.top - 170);
     }
   });
 
-  // Right-Click Context Menu (Images only, per PRD)
+  // Image Right-Click
   document.addEventListener('contextmenu', function(e) {
-    if (e.target.tagName.toLowerCase() === 'img') {
-      e.preventDefault(); // Stop standard browser right-click menu
+    if (e.target.tagName.toLowerCase() === 'img' && !state.isInspectMode) {
+      e.preventDefault(); 
       state.selectedText = '[Image Element]';
       state.targetElement = e.target;
-      
-      // Show popup right at the cursor
       showPopup(e.pageX, e.pageY);
     }
   });
 
-  // UI Helper: Show & Reset Popup
-  function showPopup(left, top) {
-    popup.style.display = 'flex';
-    popup.style.top = top + 'px';
-    popup.style.left = left + 'px';
+  // --- INSPECT MODE LOGIC ---
+  function handleInspectHover(e) {
+    if (!state.isInspectMode || fab.contains(e.target) || fabMenu.contains(e.target) || popup.contains(e.target)) return;
     
-    // Reset state and UI
-    state.selectedEmoji = null;
-    document.getElementById('vc-text').value = '';
-    document.querySelectorAll('.vc-emoji').forEach(el => {
-      el.style.transform = 'scale(1)';
-      el.style.opacity = '1';
-    });
+    // Restore previous element's styles
+    if (state.hoveredElement && state.hoveredElement !== e.target) {
+      state.hoveredElement.style.outline = state.originalOutline;
+      state.hoveredElement.style.cursor = state.originalCursor;
+    }
+    
+    // Apply highlight styles to new target
+    state.hoveredElement = e.target;
+    state.originalOutline = e.target.style.outline;
+    state.originalCursor = e.target.style.cursor;
+    
+    e.target.style.outline = '2px dashed #3b82f6';
+    e.target.style.outlineOffset = '2px';
+    e.target.style.cursor = 'crosshair';
   }
 
-  // Emoji Selection Logic
-  document.querySelectorAll('.vc-emoji').forEach(emoji => {
-    emoji.addEventListener('click', function(e) {
-      state.selectedEmoji = this.innerText;
+  function handleInspectClick(e) {
+    if (!state.isInspectMode || fab.contains(e.target) || fabMenu.contains(e.target) || popup.contains(e.target)) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+
+    state.targetElement = e.target;
+    state.selectedText = '[Inspected Element]';
+    toggleInspectMode(); // Turn off inspect mode
+    showPopup(e.pageX, e.pageY); // Open feedback box
+  }
+
+  function toggleInspectMode() {
+    state.isInspectMode = !state.isInspectMode;
+    const btn = document.getElementById('vc-inspect-btn');
+    
+    if (state.isInspectMode) {
+      btn.innerHTML = '🛑 Cancel Inspect Mode';
+      btn.style.background = '#fee2e2';
+      btn.style.color = '#991b1b';
+      btn.style.borderColor = '#f87171';
+      fabMenu.style.display = 'none'; // Hide menu while inspecting
+      document.body.addEventListener('mouseover', handleInspectHover);
+      document.body.addEventListener('click', handleInspectClick, true); // Capture phase
+      fab.innerHTML = '🛑'; // Change FAB to a cancel button visually
+    } else {
+      btn.innerHTML = '<span>🔍</span> Enter Inspect Mode';
+      btn.style.background = '#f0f0f0';
+      btn.style.color = '#111';
+      btn.style.borderColor = '#ddd';
+      fab.innerHTML = '💬';
       
-      // Visual feedback for selection
-      document.querySelectorAll('.vc-emoji').forEach(el => {
-        el.style.transform = 'scale(0.8)';
-        el.style.opacity = '0.5';
-      });
-      this.style.transform = 'scale(1.3)';
-      this.style.opacity = '1';
+      // Cleanup hover effects
+      if (state.hoveredElement) {
+        state.hoveredElement.style.outline = state.originalOutline;
+        state.hoveredElement.style.cursor = state.originalCursor;
+        state.hoveredElement = null;
+      }
+      document.body.removeEventListener('mouseover', handleInspectHover);
+      document.body.removeEventListener('click', handleInspectClick, true);
+    }
+  }
+
+  document.getElementById('vc-inspect-btn').addEventListener('click', toggleInspectMode);
+
+  // --- SUBMISSION LOGIC ---
+
+  // 1. Specific/Element Feedback Submit
+  document.querySelectorAll('.vc-emoji').forEach(emoji => {
+    emoji.addEventListener('click', function() {
+      state.selectedEmoji = this.innerText;
+      document.querySelectorAll('.vc-emoji').forEach(el => { el.style.transform = 'scale(0.8)'; el.style.opacity = '0.5'; });
+      this.style.transform = 'scale(1.3)'; this.style.opacity = '1';
     });
   });
 
-  // Submit Logic
   document.getElementById('vc-submit').addEventListener('click', () => {
     const textNote = document.getElementById('vc-text').value.trim();
-    
-    if (!state.selectedEmoji && !textNote) {
-      alert("Please select an emoji or write a note.");
-      return;
-    }
+    if (!state.selectedEmoji && !textNote) return alert("Please select an emoji or write a note.");
 
     const payload = {
+      type: 'element_feedback',
       feedback_type: state.selectedEmoji && textNote ? 'both' : (state.selectedEmoji ? 'emoji' : 'text'),
       emoji: state.selectedEmoji,
       content: textNote,
@@ -166,19 +273,28 @@ document.addEventListener('DOMContentLoaded', function() {
       element_metadata: generateResilientPath(state.targetElement)
     };
 
-    console.group('🔥 VibeCheck Payload Ready for Supabase 🔥');
-    console.log(JSON.stringify(payload, null, 2));
-    console.groupEnd();
-
-    // Clean up
-    popup.style.display = 'none';
-    window.getSelection().removeAllRanges();
-    
-    // Optional: Flash a success message on the FAB
-    const oldFabHtml = fab.innerHTML;
-    fab.innerHTML = '✅';
-    setTimeout(() => fab.innerHTML = oldFabHtml, 2000);
+    console.log('🚀 Element Feedback:', payload);
+    closeAllMenus();
+    flashSuccess();
   });
+
+  // 2. General Feedback Submit
+  document.getElementById('vc-gen-submit').addEventListener('click', () => {
+    const textNote = document.getElementById('vc-gen-text').value.trim();
+    if (!textNote) return alert("Please enter some feedback first.");
+
+    const payload = {
+      type: 'general_feedback',
+      content: textNote,
+      url: window.location.href // Good to know where general feedback came from
+    };
+
+    console.log('🚀 General Feedback:', payload);
+    closeAllMenus();
+    flashSuccess();
+    document.getElementById('vc-gen-text').value = ''; // Reset
+  });
+
 });
 </script>
 <style>
