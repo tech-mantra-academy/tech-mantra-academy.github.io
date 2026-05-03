@@ -7,8 +7,40 @@
 <title>Tech Mantra Academy | Learn. Build. Get Hired.</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
- <script>
+<script>
 document.addEventListener('DOMContentLoaded', function() {
+  
+  // --- 0. INJECT CSS DYNAMICALLY ---
+  // This prevents the user from needing a separate <style> tag
+  const styleBlock = document.createElement('style');
+  styleBlock.innerHTML = `
+    @keyframes vc-mascot-peek {
+      0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+      15% { transform: translateY(-12px) rotate(-15deg) scale(1.1); }
+      30% { transform: translateY(-12px) rotate(15deg) scale(1.1); }
+      45% { transform: translateY(-12px) rotate(-15deg) scale(1.1); }
+      60% { transform: translateY(0) rotate(0deg) scale(1); }
+    }
+    .vc-nudge-active {
+      animation: vc-mascot-peek 2s ease-in-out infinite;
+    }
+    @keyframes vc-emoji-slam {
+      0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+      15% { transform: translate(-50%, -50%) scale(1.6) rotate(-15deg); opacity: 1; }
+      25% { transform: translate(-50%, -50%) scale(1.3) rotate(15deg); }
+      35% { transform: translate(-50%, -50%) scale(1.5) rotate(0deg); }
+      100% { transform: translate(-50%, -150%) scale(1.2); opacity: 0; }
+    }
+    .vc-slam-element {
+      position: fixed;
+      font-size: 5rem;
+      pointer-events: none; 
+      z-index: 9999999;
+      animation: vc-emoji-slam 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+  `;
+  document.head.appendChild(styleBlock);
+
   // --- 1. STATE MANAGEMENT ---
   const state = {
     targetElement: null,
@@ -17,7 +49,8 @@ document.addEventListener('DOMContentLoaded', function() {
     isInspectMode: false,
     hoveredElement: null,
     originalOutline: '',
-    originalCursor: ''
+    originalCursor: '',
+    isNudgeDisabled: false
   };
 
   // --- 2. DOM PATH GENERATOR ---
@@ -28,22 +61,13 @@ document.addEventListener('DOMContentLoaded', function() {
       .join(' ').replace(/\s+/g, ' ').substring(0, 60);
 
     const pathData = {
-      target: {
-        tagName: element.tagName.toLowerCase(),
-        id: element.id || null,
-        className: element.className || null,
-        textNode: getDirectText(element),
-        src: element.src || null
-      },
+      target: { tagName: element.tagName.toLowerCase(), id: element.id || null, className: element.className || null, textNode: getDirectText(element), src: element.src || null },
       ancestry: []
     };
 
-    let current = element.parentElement;
-    let depth = 0;
+    let current = element.parentElement, depth = 0;
     while (current && depth < 4) {
-      pathData.ancestry.push({
-        tagName: current.tagName.toLowerCase(), id: current.id || null, className: current.className || null
-      });
+      pathData.ancestry.push({ tagName: current.tagName.toLowerCase(), id: current.id || null, className: current.className || null });
       if (current.id) break;
       current = current.parentElement;
       depth++;
@@ -55,33 +79,25 @@ document.addEventListener('DOMContentLoaded', function() {
   const zIndex = '999999';
   const fontFamily = 'system-ui, -apple-system, sans-serif';
 
-  // Create FAB
   const fab = document.createElement('div');
-  fab.innerHTML = '💬';
+  fab.innerHTML = `<img id="mascot-icon" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z'/></svg>" style="width: 24px; height: 24px; transition: transform 0.2s;" alt="Feedback Mascot" />`;
   Object.assign(fab.style, {
     position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px',
-    borderRadius: '25px', backgroundColor: '#171717', color: 'white', display: 'flex',
-    alignItems: 'center', justifyContent: 'center', fontSize: '24px', 
-    boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', zIndex: zIndex, transition: 'transform 0.2s'
+    borderRadius: '25px', backgroundColor: '#171717', display: 'flex',
+    alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', 
+    cursor: 'pointer', zIndex: zIndex, transition: 'transform 0.2s'
   });
   fab.onmouseover = () => fab.style.transform = 'scale(1.05)';
   fab.onmouseout = () => fab.style.transform = 'scale(1)';
   document.body.appendChild(fab);
 
-  // Create FAB Menu (General Feedback & Instructions)
   const fabMenu = document.createElement('div');
   fabMenu.innerHTML = `
     <div style="font-family: ${fontFamily};">
       <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #111;">Site Feedback</h4>
-      <textarea id="vc-gen-text" placeholder="What do you think of this page? (Anonymous)" style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: inherit;"></textarea>
+      <textarea id="vc-gen-text" placeholder="What do you think of this page?" style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: inherit;"></textarea>
       <button id="vc-gen-submit" style="width: 100%; background: #171717; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; margin-bottom: 12px;">Send General Feedback</button>
-      
       <hr style="border: 0; border-top: 1px solid #eee; margin: 0 0 12px 0;">
-      
-      <p style="font-size: 12px; color: #555; margin: 0 0 12px 0; line-height: 1.4;">
-        <strong>💡 Tip:</strong> Highlight any text or right-click any image to leave specific feedback on it.
-      </p>
-      
       <button id="vc-inspect-btn" style="width: 100%; background: #f0f0f0; color: #111; border: 1px solid #ddd; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; display: flex; justify-content: center; align-items: center; gap: 6px;">
         <span>🔍</span> Enter Inspect Mode
       </button>
@@ -94,13 +110,13 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   document.body.appendChild(fabMenu);
 
-  // Create Element Feedback Popup (Emojis + Textarea)
   const popup = document.createElement('div');
   popup.innerHTML = `
-    <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 12px;" id="vc-emojis">
-      <span class="vc-emoji" style="cursor:pointer; font-size:24px; transition: transform 0.2s;">🔥</span>
-      <span class="vc-emoji" style="cursor:pointer; font-size:24px; transition: transform 0.2s;">👍</span>
-      <span class="vc-emoji" style="cursor:pointer; font-size:24px; transition: transform 0.2s;">👎</span>
+    <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 12px;" id="vc-emojis">
+      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">❤️</span>
+      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">🔥</span>
+      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">👍</span>
+      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">👎</span>
     </div>
     <textarea id="vc-text" placeholder="Tell us more? (optional)" style="width: 100%; height: 50px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: ${fontFamily};"></textarea>
     <button id="vc-submit" style="width: 100%; background: #171717; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; font-family: ${fontFamily};">Submit</button>
@@ -112,9 +128,42 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   document.body.appendChild(popup);
 
-  // --- 4. CORE LOGIC & EVENT LISTENERS ---
+  // --- 4. FEATURE: BIG EMOJI SLAM ---
+  function triggerEmojiSlam(emojiCharacter, coords) {
+    if (!emojiCharacter) return;
+    const slam = document.createElement('div');
+    slam.innerText = emojiCharacter;
+    slam.className = 'vc-slam-element';
+    slam.style.left = coords.x + 'px';
+    slam.style.top = coords.y + 'px';
+    document.body.appendChild(slam);
+    setTimeout(() => { if (document.body.contains(slam)) slam.remove(); }, 1200);
+  }
 
-  // UI Helpers
+  // --- 5. FEATURE: MASCOT NUDGE ---
+  let nudgeTimer;
+  let lastScrollY = window.scrollY;
+  const mascotImg = document.getElementById('mascot-icon');
+
+  function resetNudgeTimer(e) {
+    if (state.isNudgeDisabled) return;
+    if (e && e.type === 'scroll') {
+      if (Math.abs(window.scrollY - lastScrollY) < 50) return;
+      lastScrollY = window.scrollY;
+    }
+    mascotImg.classList.remove('vc-nudge-active');
+    clearTimeout(nudgeTimer);
+    nudgeTimer = setTimeout(() => {
+      if (!state.isNudgeDisabled) mascotImg.classList.add('vc-nudge-active');
+    }, 30000); 
+  }
+
+  document.addEventListener('mousemove', resetNudgeTimer);
+  document.addEventListener('click', resetNudgeTimer);
+  document.addEventListener('scroll', resetNudgeTimer);
+  resetNudgeTimer(); 
+
+  // --- 6. CORE LOGIC & EVENT LISTENERS ---
   function closeAllMenus() {
     fabMenu.style.display = 'none';
     popup.style.display = 'none';
@@ -126,55 +175,40 @@ document.addEventListener('DOMContentLoaded', function() {
     fabMenu.style.display = 'none';
     popup.style.display = 'flex';
     popup.style.top = top + 'px';
-    // Prevent clipping off right side of screen
     popup.style.left = Math.min(left, window.innerWidth - 250) + 'px'; 
     state.selectedEmoji = null;
     document.getElementById('vc-text').value = '';
     document.querySelectorAll('.vc-emoji').forEach(el => { el.style.transform = 'scale(1)'; el.style.opacity = '1'; });
   }
 
-  // Flash Success Animation
-  function flashSuccess() {
-    const oldHtml = fab.innerHTML;
-    fab.innerHTML = '✅';
-    fab.style.backgroundColor = '#10b981';
-    setTimeout(() => {
-      fab.innerHTML = oldHtml;
-      fab.style.backgroundColor = '#171717';
-    }, 2000);
-  }
-
-  // FAB Click
   fab.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (state.isInspectMode) return toggleInspectMode(); // If inspecting, cancel it
+    state.isNudgeDisabled = true;
+    clearTimeout(nudgeTimer);
+    mascotImg.classList.remove('vc-nudge-active');
+
+    if (state.isInspectMode) return toggleInspectMode();
     popup.style.display = 'none';
     fabMenu.style.display = fabMenu.style.display === 'block' ? 'none' : 'block';
   });
 
-  // Close menus on outside click
   document.addEventListener('mousedown', (e) => {
     if (!fab.contains(e.target) && !fabMenu.contains(e.target) && !popup.contains(e.target)) {
       if (!state.isInspectMode) closeAllMenus();
     }
   });
 
-  // --- SPECIFIC FEEDBACK HANDLERS ---
-  
-  // Highlight Selection
   document.addEventListener('mouseup', function(e) {
     if (popup.contains(e.target) || fabMenu.contains(e.target) || state.isInspectMode) return;
-    const selection = window.getSelection();
-    const text = selection.toString().trim();
+    const text = window.getSelection().toString().trim();
     if (text.length > 0) {
       state.selectedText = text;
-      state.targetElement = selection.anchorNode.parentElement;
-      const rect = selection.getRangeAt(0).getBoundingClientRect();
+      state.targetElement = window.getSelection().anchorNode.parentElement;
+      const rect = window.getSelection().getRangeAt(0).getBoundingClientRect();
       showPopup(window.scrollX + rect.left + (rect.width / 2) - 110, window.scrollY + rect.top - 170);
     }
   });
 
-  // Image Right-Click
   document.addEventListener('contextmenu', function(e) {
     if (e.target.tagName.toLowerCase() === 'img' && !state.isInspectMode) {
       e.preventDefault(); 
@@ -184,21 +218,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // --- INSPECT MODE LOGIC ---
   function handleInspectHover(e) {
     if (!state.isInspectMode || fab.contains(e.target) || fabMenu.contains(e.target) || popup.contains(e.target)) return;
-    
-    // Restore previous element's styles
     if (state.hoveredElement && state.hoveredElement !== e.target) {
       state.hoveredElement.style.outline = state.originalOutline;
       state.hoveredElement.style.cursor = state.originalCursor;
     }
-    
-    // Apply highlight styles to new target
     state.hoveredElement = e.target;
     state.originalOutline = e.target.style.outline;
     state.originalCursor = e.target.style.cursor;
-    
     e.target.style.outline = '2px dashed #3b82f6';
     e.target.style.outlineOffset = '2px';
     e.target.style.cursor = 'crosshair';
@@ -206,37 +234,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function handleInspectClick(e) {
     if (!state.isInspectMode || fab.contains(e.target) || fabMenu.contains(e.target) || popup.contains(e.target)) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-
+    e.preventDefault(); e.stopPropagation();
     state.targetElement = e.target;
     state.selectedText = '[Inspected Element]';
-    toggleInspectMode(); // Turn off inspect mode
-    showPopup(e.pageX, e.pageY); // Open feedback box
+    toggleInspectMode();
+    showPopup(e.pageX, e.pageY);
   }
 
   function toggleInspectMode() {
     state.isInspectMode = !state.isInspectMode;
     const btn = document.getElementById('vc-inspect-btn');
-    
     if (state.isInspectMode) {
       btn.innerHTML = '🛑 Cancel Inspect Mode';
-      btn.style.background = '#fee2e2';
-      btn.style.color = '#991b1b';
-      btn.style.borderColor = '#f87171';
-      fabMenu.style.display = 'none'; // Hide menu while inspecting
+      btn.style.background = '#fee2e2'; btn.style.color = '#991b1b'; btn.style.borderColor = '#f87171';
+      fabMenu.style.display = 'none';
       document.body.addEventListener('mouseover', handleInspectHover);
-      document.body.addEventListener('click', handleInspectClick, true); // Capture phase
-      fab.innerHTML = '🛑'; // Change FAB to a cancel button visually
+      document.body.addEventListener('click', handleInspectClick, true);
     } else {
       btn.innerHTML = '<span>🔍</span> Enter Inspect Mode';
-      btn.style.background = '#f0f0f0';
-      btn.style.color = '#111';
-      btn.style.borderColor = '#ddd';
-      fab.innerHTML = '💬';
-      
-      // Cleanup hover effects
+      btn.style.background = '#f0f0f0'; btn.style.color = '#111'; btn.style.borderColor = '#ddd';
       if (state.hoveredElement) {
         state.hoveredElement.style.outline = state.originalOutline;
         state.hoveredElement.style.cursor = state.originalCursor;
@@ -250,8 +266,6 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('vc-inspect-btn').addEventListener('click', toggleInspectMode);
 
   // --- SUBMISSION LOGIC ---
-
-  // 1. Specific/Element Feedback Submit
   document.querySelectorAll('.vc-emoji').forEach(emoji => {
     emoji.addEventListener('click', function() {
       state.selectedEmoji = this.innerText;
@@ -260,9 +274,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  document.getElementById('vc-submit').addEventListener('click', () => {
+  document.getElementById('vc-submit').addEventListener('click', (e) => {
     const textNote = document.getElementById('vc-text').value.trim();
     if (!state.selectedEmoji && !textNote) return alert("Please select an emoji or write a note.");
+
+    if (state.selectedEmoji) {
+      triggerEmojiSlam(state.selectedEmoji, { x: e.clientX, y: e.clientY });
+    }
 
     const payload = {
       type: 'element_feedback',
@@ -273,28 +291,17 @@ document.addEventListener('DOMContentLoaded', function() {
       element_metadata: generateResilientPath(state.targetElement)
     };
 
-    console.log('🚀 Element Feedback:', payload);
+    console.log('🚀 Element Feedback Payload:', payload);
     closeAllMenus();
-    flashSuccess();
   });
 
-  // 2. General Feedback Submit
   document.getElementById('vc-gen-submit').addEventListener('click', () => {
     const textNote = document.getElementById('vc-gen-text').value.trim();
     if (!textNote) return alert("Please enter some feedback first.");
-
-    const payload = {
-      type: 'general_feedback',
-      content: textNote,
-      url: window.location.href // Good to know where general feedback came from
-    };
-
-    console.log('🚀 General Feedback:', payload);
+    console.log('🚀 General Feedback Payload:', { type: 'general_feedback', content: textNote, url: window.location.href });
     closeAllMenus();
-    flashSuccess();
-    document.getElementById('vc-gen-text').value = ''; // Reset
+    document.getElementById('vc-gen-text').value = '';
   });
-
 });
 </script>
 <style>
