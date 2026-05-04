@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', function() {
       position: fixed; font-size: 5rem; pointer-events: none; z-index: 9999999;
       animation: vc-emoji-slam 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     }
-    /* New Fade Animation for Image Badge */
     @keyframes vc-fade-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
   `;
   document.head.appendChild(styleBlock);
@@ -93,17 +92,19 @@ document.addEventListener('DOMContentLoaded', function() {
   Object.assign(popup.style, { position: 'absolute', backgroundColor: '#ffffff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', display: 'none', flexDirection: 'column', width: '220px', zIndex: zIndex });
   document.body.appendChild(popup);
 
-  // NEW: The Image Hover/Tap Badge
   const imgBadge = document.createElement('div');
   imgBadge.innerHTML = '💬 Rate';
-  Object.assign(imgBadge.style, {
-    position: 'absolute', display: 'none', background: 'rgba(23, 23, 23, 0.9)', color: 'white', 
-    padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', fontFamily: fontFamily,
-    cursor: 'pointer', zIndex: '999998', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', animation: 'vc-fade-in 0.2s ease-out'
-  });
+  Object.assign(imgBadge.style, { position: 'absolute', display: 'none', background: 'rgba(23, 23, 23, 0.9)', color: 'white', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', fontFamily: fontFamily, cursor: 'pointer', zIndex: '999998', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', animation: 'vc-fade-in 0.2s ease-out' });
   document.body.appendChild(imgBadge);
 
-  // --- 4. THE BIRD MASCOT NUDGE (Unchanged) ---
+  // --- NEW: SECURITY GUARD ---
+  // This helper checks if an element is part of our widget, preventing feedback loops
+  function isInternalNode(node) {
+    const mascot = document.getElementById('vc-mascot');
+    return fab.contains(node) || fabMenu.contains(node) || popup.contains(node) || imgBadge.contains(node) || (mascot && mascot.contains(node));
+  }
+
+  // --- 4. THE BIRD MASCOT NUDGE ---
   function createMascot() {
     if (document.getElementById('vc-mascot') || state.isNudgeDisabled) return;
     const mascot = document.createElement('div'); mascot.id = 'vc-mascot';
@@ -132,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
   ['mousemove', 'click', 'scroll', 'touchstart'].forEach(evt => document.addEventListener(evt, resetActivityTimer, {passive: true}));
   resetActivityTimer();
 
-  // --- 5. EMOJI SLAM (Unchanged) ---
+  // --- 5. EMOJI SLAM ---
   function triggerEmojiSlam(emojiCharacter, coords) {
     if (!emojiCharacter) return;
     const slam = document.createElement('div'); slam.innerText = emojiCharacter; slam.className = 'vc-slam-element';
@@ -163,57 +164,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Universal Click-Outside Listener
   document.addEventListener('mousedown', (e) => {
-    if (!fab.contains(e.target) && !fabMenu.contains(e.target) && !popup.contains(e.target) && !imgBadge.contains(e.target)) { 
-      if (!state.isInspectMode) closeAllMenus(); 
-    }
+    if (!isInternalNode(e.target)) { if (!state.isInspectMode) closeAllMenus(); }
   });
 
-  // --- NEW: ROBUST MOBILE & DESKTOP TEXT SELECTION ---
   let selectionTimeout;
   document.addEventListener('selectionchange', () => {
     if (popup.style.display === 'flex' || state.isInspectMode) return;
-    
-    // Clear previous timer. We only fire 500ms AFTER the user stops dragging their selection.
     clearTimeout(selectionTimeout);
-    
     selectionTimeout = setTimeout(() => {
       const selection = window.getSelection();
       const text = selection.toString().trim();
-      
       if (text.length > 0) {
-        state.selectedText = text;
-        state.targetElement = selection.anchorNode.parentElement;
+        state.selectedText = text; state.targetElement = selection.anchorNode.parentElement;
         const rect = selection.getRangeAt(0).getBoundingClientRect();
-        
-        // On mobile, native tooltips appear above text. We position VibeCheck slightly below it to avoid conflict.
         const isMobile = window.innerWidth < 768;
         const topPosition = isMobile ? (window.scrollY + rect.bottom + 15) : (window.scrollY + rect.top - 170);
-        
         showPopup(window.scrollX + rect.left + (rect.width / 2) - 110, topPosition);
       }
     }, 500); 
   });
 
-  // --- NEW: NON-DESTRUCTIVE IMAGE BADGE ---
+  // --- NON-DESTRUCTIVE IMAGE BADGE (PATCHED) ---
   function handleImageHover(e) {
-    if (e.target.tagName.toLowerCase() === 'img' && !state.isInspectMode) {
+    // Only proceed if it's an image AND it's NOT part of our own widget
+    if (e.target.tagName.toLowerCase() === 'img' && !state.isInspectMode && !isInternalNode(e.target)) {
       state.activeImage = e.target;
       const rect = state.activeImage.getBoundingClientRect();
       imgBadge.style.display = 'block';
       imgBadge.style.top = (window.scrollY + rect.top + 8) + 'px';
-      imgBadge.style.left = (window.scrollX + rect.right - 70) + 'px'; // Inset from top right
+      imgBadge.style.left = (window.scrollX + rect.right - 70) + 'px';
     }
   }
 
-  // Desktop Hover
   document.addEventListener('mouseover', handleImageHover);
-  
-  // Mobile Tap (Allows badge to show if user taps an image)
-  document.addEventListener('touchstart', (e) => {
-    if (e.target.tagName.toLowerCase() === 'img') handleImageHover(e);
-  }, {passive: true});
+  document.addEventListener('touchstart', (e) => { if (e.target.tagName.toLowerCase() === 'img') handleImageHover(e); }, {passive: true});
 
-  // Hide badge if mouse moves away from image and badge
   document.addEventListener('mousemove', (e) => {
     if (imgBadge.style.display === 'block' && state.activeImage) {
       if (!state.activeImage.contains(e.target) && !imgBadge.contains(e.target)) {
@@ -222,7 +207,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Click the badge to open feedback
   imgBadge.addEventListener('click', (e) => {
     e.stopPropagation();
     state.selectedText = '[Image Element]';
@@ -231,9 +215,18 @@ document.addEventListener('DOMContentLoaded', function() {
     showPopup(window.scrollX + rect.left + (rect.width/2) - 110, window.scrollY + rect.top + (rect.height/2) - 50);
   });
 
-  // Inspect Mode (Unchanged)
+  // Image Right-Click Fallback (PATCHED)
+  document.addEventListener('contextmenu', function(e) {
+    if (e.target.tagName.toLowerCase() === 'img' && !state.isInspectMode && !isInternalNode(e.target)) {
+      e.preventDefault(); 
+      state.selectedText = '[Image Element]'; state.targetElement = e.target;
+      showPopup(e.pageX, e.pageY);
+    }
+  });
+
+  // Inspect Mode
   function handleInspectHover(e) {
-    if (!state.isInspectMode || fab.contains(e.target) || fabMenu.contains(e.target) || popup.contains(e.target)) return;
+    if (!state.isInspectMode || isInternalNode(e.target)) return;
     if (state.hoveredElement && state.hoveredElement !== e.target) {
       state.hoveredElement.style.outline = state.originalOutline; state.hoveredElement.style.cursor = state.originalCursor;
     }
@@ -242,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function handleInspectClick(e) {
-    if (!state.isInspectMode || fab.contains(e.target) || fabMenu.contains(e.target) || popup.contains(e.target)) return;
+    if (!state.isInspectMode || isInternalNode(e.target)) return;
     e.preventDefault(); e.stopPropagation();
     state.targetElement = e.target; state.selectedText = '[Inspected Element]';
     toggleInspectMode(); showPopup(e.pageX, e.pageY);
