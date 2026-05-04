@@ -13,10 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // --- 0. INJECT CSS DYNAMICALLY ---
   const styleBlock = document.createElement('style');
   styleBlock.innerHTML = `
-    @keyframes vc-float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
+    @keyframes vc-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     @keyframes vc-emoji-slam {
       0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
       15% { transform: translate(-50%, -50%) scale(1.6) rotate(-15deg); opacity: 1; }
@@ -28,6 +25,8 @@ document.addEventListener('DOMContentLoaded', function() {
       position: fixed; font-size: 5rem; pointer-events: none; z-index: 9999999;
       animation: vc-emoji-slam 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     }
+    /* New Fade Animation for Image Badge */
+    @keyframes vc-fade-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
   `;
   document.head.appendChild(styleBlock);
 
@@ -35,27 +34,18 @@ document.addEventListener('DOMContentLoaded', function() {
   const state = {
     targetElement: null, selectedText: '', selectedEmoji: null,
     isInspectMode: false, hoveredElement: null, originalOutline: '', originalCursor: '',
-    isNudgeDisabled: false, isMascotVisible: false
+    isNudgeDisabled: false, isMascotVisible: false, activeImage: null
   };
 
   // --- 2. DOM PATH GENERATOR ---
   function generateResilientPath(element) {
     if (!element || !(element instanceof Element)) return null;
-    const getDirectText = (el) => Array.from(el.childNodes)
-      .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent.trim())
-      .join(' ').replace(/\s+/g, ' ').substring(0, 60);
-
-    const pathData = {
-      target: { tagName: element.tagName.toLowerCase(), id: element.id || null, className: element.className || null, textNode: getDirectText(element), src: element.src || null },
-      ancestry: []
-    };
-
+    const getDirectText = (el) => Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent.trim()).join(' ').replace(/\s+/g, ' ').substring(0, 60);
+    const pathData = { target: { tagName: element.tagName.toLowerCase(), id: element.id || null, className: element.className || null, textNode: getDirectText(element), src: element.src || null }, ancestry: [] };
     let current = element.parentElement, depth = 0;
     while (current && depth < 4) {
       pathData.ancestry.push({ tagName: current.tagName.toLowerCase(), id: current.id || null, className: current.className || null });
-      if (current.id) break;
-      current = current.parentElement;
-      depth++;
+      if (current.id) break; current = current.parentElement; depth++;
     }
     return JSON.stringify(pathData);
   }
@@ -66,14 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const fab = document.createElement('div');
   fab.innerHTML = `<img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z'/></svg>" style="width: 24px; height: 24px;" alt="Feedback" />`;
-  Object.assign(fab.style, {
-    position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px',
-    borderRadius: '25px', backgroundColor: '#171717', display: 'flex', alignItems: 'center', 
-    justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', 
-    zIndex: zIndex, transition: 'transform 0.2s'
-  });
-  fab.onmouseover = () => fab.style.transform = 'scale(1.05)';
-  fab.onmouseout = () => fab.style.transform = 'scale(1)';
+  Object.assign(fab.style, { position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px', borderRadius: '25px', backgroundColor: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', zIndex: zIndex, transition: 'transform 0.2s' });
   document.body.appendChild(fab);
 
   const fabMenu = document.createElement('div');
@@ -85,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <hr style="border: 0; border-top: 1px solid #eee; margin: 0 0 12px 0;">
       <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 12px;">
         <p style="font-size: 12px; color: #475569; margin: 0; line-height: 1.4;">
-          <strong>💡 Pro Tip:</strong> Highlight text or right-click (long-press) images to leave specific feedback!
+          <strong>💡 Tip:</strong> Highlight text or tap the 💬 icon on images to leave specific feedback!
         </p>
       </div>
       <button id="vc-inspect-btn" style="width: 100%; background: #f0f0f0; color: #111; border: 1px solid #ddd; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; display: flex; justify-content: center; align-items: center; gap: 6px;">
@@ -93,11 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
       </button>
     </div>
   `;
-  Object.assign(fabMenu.style, {
-    position: 'fixed', bottom: '85px', right: '20px', width: '280px', backgroundColor: '#ffffff', 
-    border: '1px solid #e5e5e5', borderRadius: '12px', padding: '16px', 
-    boxShadow: '0 8px 30px rgba(0,0,0,0.12)', display: 'none', zIndex: zIndex
-  });
+  Object.assign(fabMenu.style, { position: 'fixed', bottom: '85px', right: '20px', width: '280px', backgroundColor: '#ffffff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '16px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', display: 'none', zIndex: zIndex });
   document.body.appendChild(fabMenu);
 
   const popup = document.createElement('div');
@@ -111,26 +90,25 @@ document.addEventListener('DOMContentLoaded', function() {
     <textarea id="vc-text" placeholder="Tell us more? (optional)" style="width: 100%; height: 50px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: ${fontFamily};"></textarea>
     <button id="vc-submit" style="width: 100%; background: #171717; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; font-family: ${fontFamily};">Submit</button>
   `;
-  Object.assign(popup.style, {
-    position: 'absolute', backgroundColor: '#ffffff', border: '1px solid #e5e5e5', borderRadius: '12px', 
-    padding: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', display: 'none', flexDirection: 'column', 
-    width: '220px', zIndex: zIndex
-  });
+  Object.assign(popup.style, { position: 'absolute', backgroundColor: '#ffffff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', display: 'none', flexDirection: 'column', width: '220px', zIndex: zIndex });
   document.body.appendChild(popup);
 
-  // --- 4. THE BIRD MASCOT NUDGE ---
+  // NEW: The Image Hover/Tap Badge
+  const imgBadge = document.createElement('div');
+  imgBadge.innerHTML = '💬 Rate';
+  Object.assign(imgBadge.style, {
+    position: 'absolute', display: 'none', background: 'rgba(23, 23, 23, 0.9)', color: 'white', 
+    padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', fontFamily: fontFamily,
+    cursor: 'pointer', zIndex: '999998', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', animation: 'vc-fade-in 0.2s ease-out'
+  });
+  document.body.appendChild(imgBadge);
+
+  // --- 4. THE BIRD MASCOT NUDGE (Unchanged) ---
   function createMascot() {
     if (document.getElementById('vc-mascot') || state.isNudgeDisabled) return;
-    const mascot = document.createElement('div');
-    mascot.id = 'vc-mascot';
-    mascot.innerHTML = `
-      <div style="background: white; border: 1px solid #ddd; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-family: ${fontFamily}; box-shadow: 0 4px 12px rgba(0,0,0,0.1); white-space: nowrap;">Care to leave some feedback?</div>
-      <div style="font-size: 32px; transform: scaleX(-1);">🕊️</div>
-    `;
-    Object.assign(mascot.style, {
-      position: 'fixed', bottom: '90px', right: '-300px', display: 'flex', alignItems: 'center', gap: '8px', zIndex: '999998',
-      transition: 'right 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55)', cursor: 'pointer'
-    });
+    const mascot = document.createElement('div'); mascot.id = 'vc-mascot';
+    mascot.innerHTML = `<div style="background: white; border: 1px solid #ddd; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-family: ${fontFamily}; box-shadow: 0 4px 12px rgba(0,0,0,0.1); white-space: nowrap;">Care to leave some feedback?</div><div style="font-size: 32px; transform: scaleX(-1);">🕊️</div>`;
+    Object.assign(mascot.style, { position: 'fixed', bottom: '90px', right: '-300px', display: 'flex', alignItems: 'center', gap: '8px', zIndex: '999998', transition: 'right 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55)', cursor: 'pointer' });
     document.body.appendChild(mascot);
     setTimeout(() => { if (document.body.contains(mascot)) { mascot.style.right = '20px'; mascot.style.animation = 'vc-float 3s ease-in-out infinite'; state.isMascotVisible = true; } }, 100);
     mascot.addEventListener('click', (e) => { e.stopPropagation(); dismissMascot(); fab.click(); });
@@ -154,11 +132,10 @@ document.addEventListener('DOMContentLoaded', function() {
   ['mousemove', 'click', 'scroll', 'touchstart'].forEach(evt => document.addEventListener(evt, resetActivityTimer, {passive: true}));
   resetActivityTimer();
 
-  // --- 5. EMOJI SLAM ---
+  // --- 5. EMOJI SLAM (Unchanged) ---
   function triggerEmojiSlam(emojiCharacter, coords) {
     if (!emojiCharacter) return;
-    const slam = document.createElement('div');
-    slam.innerText = emojiCharacter; slam.className = 'vc-slam-element';
+    const slam = document.createElement('div'); slam.innerText = emojiCharacter; slam.className = 'vc-slam-element';
     slam.style.left = coords.x + 'px'; slam.style.top = coords.y + 'px';
     document.body.appendChild(slam);
     setTimeout(() => { if (document.body.contains(slam)) slam.remove(); }, 1200);
@@ -166,14 +143,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // --- 6. CORE LOGIC & EVENT LISTENERS ---
   function closeAllMenus() {
-    fabMenu.style.display = 'none'; popup.style.display = 'none';
+    fabMenu.style.display = 'none'; popup.style.display = 'none'; imgBadge.style.display = 'none';
     if (state.isInspectMode) toggleInspectMode();
     window.getSelection().removeAllRanges();
   }
 
   function showPopup(left, top) {
-    fabMenu.style.display = 'none'; popup.style.display = 'flex';
-    popup.style.top = top + 'px'; popup.style.left = Math.min(Math.max(10, left), window.innerWidth - 230) + 'px'; // Mobile bounds protection
+    fabMenu.style.display = 'none'; popup.style.display = 'flex'; imgBadge.style.display = 'none';
+    popup.style.top = top + 'px'; popup.style.left = Math.min(Math.max(10, left), window.innerWidth - 230) + 'px'; 
     state.selectedEmoji = null; document.getElementById('vc-text').value = '';
     document.querySelectorAll('.vc-emoji').forEach(el => { el.style.transform = 'scale(1)'; el.style.opacity = '1'; });
   }
@@ -184,56 +161,77 @@ document.addEventListener('DOMContentLoaded', function() {
     popup.style.display = 'none'; fabMenu.style.display = fabMenu.style.display === 'block' ? 'none' : 'block';
   });
 
+  // Universal Click-Outside Listener
   document.addEventListener('mousedown', (e) => {
-    if (!fab.contains(e.target) && !fabMenu.contains(e.target) && !popup.contains(e.target)) { if (!state.isInspectMode) closeAllMenus(); }
-  });
-  document.addEventListener('touchstart', (e) => {
-    if (!fab.contains(e.target) && !fabMenu.contains(e.target) && !popup.contains(e.target)) { if (!state.isInspectMode) closeAllMenus(); }
+    if (!fab.contains(e.target) && !fabMenu.contains(e.target) && !popup.contains(e.target) && !imgBadge.contains(e.target)) { 
+      if (!state.isInspectMode) closeAllMenus(); 
+    }
   });
 
-  // Highlight Text Handle (Mobile + Desktop)
-  function handleTextSelection(e) {
-    if (popup.contains(e.target) || fabMenu.contains(e.target) || state.isInspectMode) return;
+  // --- NEW: ROBUST MOBILE & DESKTOP TEXT SELECTION ---
+  let selectionTimeout;
+  document.addEventListener('selectionchange', () => {
+    if (popup.style.display === 'flex' || state.isInspectMode) return;
     
-    // Slight delay is REQUIRED for mobile browsers to finalize the text bounds after finger lifts
-    setTimeout(() => {
-      const text = window.getSelection().toString().trim();
+    // Clear previous timer. We only fire 500ms AFTER the user stops dragging their selection.
+    clearTimeout(selectionTimeout);
+    
+    selectionTimeout = setTimeout(() => {
+      const selection = window.getSelection();
+      const text = selection.toString().trim();
+      
       if (text.length > 0) {
-        state.selectedText = text; state.targetElement = window.getSelection().anchorNode.parentElement;
-        const rect = window.getSelection().getRangeAt(0).getBoundingClientRect();
-        showPopup(window.scrollX + rect.left + (rect.width / 2) - 110, window.scrollY + rect.top - 170);
+        state.selectedText = text;
+        state.targetElement = selection.anchorNode.parentElement;
+        const rect = selection.getRangeAt(0).getBoundingClientRect();
+        
+        // On mobile, native tooltips appear above text. We position VibeCheck slightly below it to avoid conflict.
+        const isMobile = window.innerWidth < 768;
+        const topPosition = isMobile ? (window.scrollY + rect.bottom + 15) : (window.scrollY + rect.top - 170);
+        
+        showPopup(window.scrollX + rect.left + (rect.width / 2) - 110, topPosition);
       }
-    }, 50);
-  }
-  document.addEventListener('mouseup', handleTextSelection);
-  document.addEventListener('touchend', handleTextSelection);
+    }, 500); 
+  });
 
-  // Image Right-Click (Desktop) & Long-Press (Mobile)
-  let longPressTimer;
-  document.addEventListener('contextmenu', function(e) {
+  // --- NEW: NON-DESTRUCTIVE IMAGE BADGE ---
+  function handleImageHover(e) {
     if (e.target.tagName.toLowerCase() === 'img' && !state.isInspectMode) {
-      e.preventDefault(); 
-      state.selectedText = '[Image Element]'; state.targetElement = e.target;
-      showPopup(e.pageX, e.pageY);
+      state.activeImage = e.target;
+      const rect = state.activeImage.getBoundingClientRect();
+      imgBadge.style.display = 'block';
+      imgBadge.style.top = (window.scrollY + rect.top + 8) + 'px';
+      imgBadge.style.left = (window.scrollX + rect.right - 70) + 'px'; // Inset from top right
+    }
+  }
+
+  // Desktop Hover
+  document.addEventListener('mouseover', handleImageHover);
+  
+  // Mobile Tap (Allows badge to show if user taps an image)
+  document.addEventListener('touchstart', (e) => {
+    if (e.target.tagName.toLowerCase() === 'img') handleImageHover(e);
+  }, {passive: true});
+
+  // Hide badge if mouse moves away from image and badge
+  document.addEventListener('mousemove', (e) => {
+    if (imgBadge.style.display === 'block' && state.activeImage) {
+      if (!state.activeImage.contains(e.target) && !imgBadge.contains(e.target)) {
+        imgBadge.style.display = 'none';
+      }
     }
   });
 
-  // Mobile Long-Press Simulator
-  document.addEventListener('touchstart', function(e) {
-    if (e.target.tagName.toLowerCase() === 'img' && !state.isInspectMode) {
-      longPressTimer = setTimeout(() => {
-        state.selectedText = '[Image Element]'; state.targetElement = e.target;
-        const rect = e.target.getBoundingClientRect();
-        // Fallback positioning for touches
-        showPopup(window.scrollX + rect.left + (rect.width/2) - 110, window.scrollY + rect.top + (rect.height/2) - 50);
-      }, 600); // Trigger after holding for 600ms
-    }
-  }, {passive: true});
-  
-  document.addEventListener('touchend', () => clearTimeout(longPressTimer));
-  document.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+  // Click the badge to open feedback
+  imgBadge.addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.selectedText = '[Image Element]';
+    state.targetElement = state.activeImage;
+    const rect = state.activeImage.getBoundingClientRect();
+    showPopup(window.scrollX + rect.left + (rect.width/2) - 110, window.scrollY + rect.top + (rect.height/2) - 50);
+  });
 
-  // Inspect Mode
+  // Inspect Mode (Unchanged)
   function handleInspectHover(e) {
     if (!state.isInspectMode || fab.contains(e.target) || fabMenu.contains(e.target) || popup.contains(e.target)) return;
     if (state.hoveredElement && state.hoveredElement !== e.target) {
@@ -281,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const textNote = document.getElementById('vc-text').value.trim();
     if (!state.selectedEmoji && !textNote) return alert("Please select an emoji or write a note.");
 
-    if (state.selectedEmoji) triggerEmojiSlam(state.selectedEmoji, { x: e.clientX || window.innerWidth/2, y: e.clientY || window.innerHeight/2 }); // Fallback for mobile clicks
+    if (state.selectedEmoji) triggerEmojiSlam(state.selectedEmoji, { x: e.clientX || window.innerWidth/2, y: e.clientY || window.innerHeight/2 }); 
 
     console.log('🚀 Element Feedback Payload:', {
       type: 'element_feedback', feedback_type: state.selectedEmoji && textNote ? 'both' : (state.selectedEmoji ? 'emoji' : 'text'),
