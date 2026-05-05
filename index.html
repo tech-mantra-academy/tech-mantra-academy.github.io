@@ -7,7 +7,7 @@
 <title>Tech Mantra Academy | Learn. Build. Get Hired.</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+  <script>
 document.addEventListener('DOMContentLoaded', function() {
   
   // --- 0. INJECT CSS DYNAMICALLY ---
@@ -29,18 +29,46 @@ document.addEventListener('DOMContentLoaded', function() {
   `;
   document.head.appendChild(styleBlock);
 
-  // --- 1. STATE MANAGEMENT ---
+  // --- 1. STATE & THEME MANAGEMENT ---
   const state = {
     targetElement: null, selectedText: '', selectedEmoji: null,
     isInspectMode: false, hoveredElement: null, originalOutline: '', originalCursor: '',
-    isNudgeDisabled: false, isMascotVisible: false, activeImage: null
+    isNudgeDisabled: false, isMascotVisible: false, activeImage: null,
+    themeColor: '#171717', // Default black
+    customQuestion: 'Tell us more? (optional)' // Default question
   };
 
-  // --- 2. DOM PATH GENERATOR ---
+  const fontFamily = 'system-ui, -apple-system, sans-serif';
+  const zIndex = '999999';
+
+  // --- 2. SILENT ANALYTICS ENGINE ---
+  function getSilentAnalytics() {
+    const ua = navigator.userAgent;
+    let browser = "Unknown", os = "Unknown";
+    
+    if (ua.includes("Firefox")) browser = "Firefox";
+    else if (ua.includes("Chrome")) browser = "Chrome";
+    else if (ua.includes("Safari")) browser = "Safari";
+
+    if (ua.includes("Win")) os = "Windows";
+    else if (ua.includes("Mac")) os = "MacOS";
+    else if (ua.includes("Linux")) os = "Linux";
+    else if (ua.includes("Android")) os = "Android";
+    else if (ua.includes("like Mac")) os = "iOS";
+
+    return {
+      browser: browser,
+      os: os,
+      screenSize: `${window.innerWidth}x${window.innerHeight}`,
+      timezone_location: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ip: "Fetched via backend in production (Hidden on frontend)" 
+    };
+  }
+
   function generateResilientPath(element) {
     if (!element || !(element instanceof Element)) return null;
-    const getDirectText = (el) => Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent.trim()).join(' ').replace(/\s+/g, ' ').substring(0, 60);
-    const pathData = { target: { tagName: element.tagName.toLowerCase(), id: element.id || null, className: element.className || null, textNode: getDirectText(element), src: element.src || null }, ancestry: [] };
+    const getDirectText = (el) => Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent.trim()).join(' ').substring(0, 60);
+    const pathData = { target: { tagName: element.tagName.toLowerCase(), id: element.id || null, className: element.className || null, textNode: getDirectText(element) }, ancestry: [] };
     let current = element.parentElement, depth = 0;
     while (current && depth < 4) {
       pathData.ancestry.push({ tagName: current.tagName.toLowerCase(), id: current.id || null, className: current.className || null });
@@ -49,30 +77,20 @@ document.addEventListener('DOMContentLoaded', function() {
     return JSON.stringify(pathData);
   }
 
-  // --- 3. UI CREATION ---
-  const zIndex = '999999';
-  const fontFamily = 'system-ui, -apple-system, sans-serif';
-
+  // --- 3. UI CREATION (USER FACING) ---
   const fab = document.createElement('div');
   fab.innerHTML = `<img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z'/></svg>" style="width: 24px; height: 24px;" alt="Feedback" />`;
-  Object.assign(fab.style, { position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px', borderRadius: '25px', backgroundColor: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', zIndex: zIndex, transition: 'transform 0.2s' });
+  Object.assign(fab.style, { position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px', borderRadius: '25px', backgroundColor: state.themeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', zIndex: zIndex, transition: 'transform 0.2s, background-color 0.3s' });
   document.body.appendChild(fab);
 
   const fabMenu = document.createElement('div');
   fabMenu.innerHTML = `
     <div style="font-family: ${fontFamily};">
-      <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #111;">Site Feedback</h4>
-      <textarea id="vc-gen-text" placeholder="What do you think of this page?" style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: inherit;"></textarea>
-      <button id="vc-gen-submit" style="width: 100%; background: #171717; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; margin-bottom: 12px;">Send Feedback</button>
-      <hr style="border: 0; border-top: 1px solid #eee; margin: 0 0 12px 0;">
-      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 12px;">
-        <p style="font-size: 12px; color: #475569; margin: 0; line-height: 1.4;">
-          <strong>💡 Tip:</strong> Highlight text or tap the 💬 icon on images to leave specific feedback!
-        </p>
-      </div>
-      <button id="vc-inspect-btn" style="width: 100%; background: #f0f0f0; color: #111; border: 1px solid #ddd; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; display: flex; justify-content: center; align-items: center; gap: 6px;">
-        <span>🔍</span> Enter Inspect Mode
-      </button>
+      <h4 id="vc-menu-title" style="margin: 0 0 8px 0; font-size: 14px; color: #111;">What do you think of this page?</h4>
+      <textarea id="vc-gen-text" placeholder="Type your thoughts..." style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: inherit;"></textarea>
+      <button id="vc-gen-submit" style="width: 100%; background: ${state.themeColor}; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; margin-bottom: 12px; transition: background-color 0.3s;">Send Feedback</button>
+      <button id="vc-inspect-btn" style="width: 100%; background: #f0f0f0; color: #111; border: 1px solid #ddd; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; display: flex; justify-content: center; align-items: center; gap: 6px;"><span>🔍</span> Select Element to Rate</button>
+      <a href="#" id="vc-admin-login" style="font-size: 11px; color: #94a3b8; text-decoration: none; display: block; text-align: center; margin-top: 12px;">Admin Login</a>
     </div>
   `;
   Object.assign(fabMenu.style, { position: 'fixed', bottom: '85px', right: '20px', width: '280px', backgroundColor: '#ffffff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '16px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', display: 'none', zIndex: zIndex });
@@ -81,34 +99,27 @@ document.addEventListener('DOMContentLoaded', function() {
   const popup = document.createElement('div');
   popup.innerHTML = `
     <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 12px;" id="vc-emojis">
-      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">❤️</span>
-      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">🔥</span>
-      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">👍</span>
-      <span class="vc-emoji" style="cursor:pointer; font-size:22px; transition: transform 0.2s;">👎</span>
+      <span class="vc-emoji" style="cursor:pointer; font-size:22px;">🤩</span>
+      <span class="vc-emoji" style="cursor:pointer; font-size:22px;">🙂</span>
+      <span class="vc-emoji" style="cursor:pointer; font-size:22px;">😕</span>
+      <span class="vc-emoji" style="cursor:pointer; font-size:22px;">😡</span>
     </div>
-    <textarea id="vc-text" placeholder="Tell us more? (optional)" style="width: 100%; height: 50px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: ${fontFamily};"></textarea>
-    <button id="vc-submit" style="width: 100%; background: #171717; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; font-family: ${fontFamily};">Submit</button>
+    <textarea id="vc-text" placeholder="${state.customQuestion}" style="width: 100%; height: 50px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: ${fontFamily};"></textarea>
+    <button id="vc-submit" style="width: 100%; background: ${state.themeColor}; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; font-family: ${fontFamily}; transition: background-color 0.3s;">Submit</button>
   `;
   Object.assign(popup.style, { position: 'absolute', backgroundColor: '#ffffff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', display: 'none', flexDirection: 'column', width: '220px', zIndex: zIndex });
   document.body.appendChild(popup);
 
-  const imgBadge = document.createElement('div');
-  imgBadge.innerHTML = '💬 Rate';
-  Object.assign(imgBadge.style, { position: 'absolute', display: 'none', background: 'rgba(23, 23, 23, 0.9)', color: 'white', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', fontFamily: fontFamily, cursor: 'pointer', zIndex: '999998', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', animation: 'vc-fade-in 0.2s ease-out' });
-  document.body.appendChild(imgBadge);
-
-  // --- NEW: SECURITY GUARD ---
-  // This helper checks if an element is part of our widget, preventing feedback loops
   function isInternalNode(node) {
     const mascot = document.getElementById('vc-mascot');
-    return fab.contains(node) || fabMenu.contains(node) || popup.contains(node) || imgBadge.contains(node) || (mascot && mascot.contains(node));
+    return fab.contains(node) || fabMenu.contains(node) || popup.contains(node) || (mascot && mascot.contains(node)) || document.getElementById('vc-admin-panel')?.contains(node);
   }
 
-  // --- 4. THE BIRD MASCOT NUDGE ---
-  function createMascot() {
+  // --- 4. MASCOT & SMART NUDGES ---
+  function flyInMascot(message) {
     if (document.getElementById('vc-mascot') || state.isNudgeDisabled) return;
     const mascot = document.createElement('div'); mascot.id = 'vc-mascot';
-    mascot.innerHTML = `<div style="background: white; border: 1px solid #ddd; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-family: ${fontFamily}; box-shadow: 0 4px 12px rgba(0,0,0,0.1); white-space: nowrap;">Care to leave some feedback?</div><div style="font-size: 32px; transform: scaleX(-1);">🕊️</div>`;
+    mascot.innerHTML = `<div style="background: white; border: 1px solid #ddd; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-family: ${fontFamily}; box-shadow: 0 4px 12px rgba(0,0,0,0.1); white-space: nowrap;">${message}</div><div style="font-size: 32px; transform: scaleX(-1);">🕊️</div>`;
     Object.assign(mascot.style, { position: 'fixed', bottom: '90px', right: '-300px', display: 'flex', alignItems: 'center', gap: '8px', zIndex: '999998', transition: 'right 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55)', cursor: 'pointer' });
     document.body.appendChild(mascot);
     setTimeout(() => { if (document.body.contains(mascot)) { mascot.style.right = '20px'; mascot.style.animation = 'vc-float 3s ease-in-out infinite'; state.isMascotVisible = true; } }, 100);
@@ -123,34 +134,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  let nudgeTimer; let lastScrollY = window.scrollY;
-  function resetActivityTimer(e) {
-    if (state.isMascotVisible) { if (e && e.type === 'scroll' && Math.abs(window.scrollY - lastScrollY) < 50) return; dismissMascot(); return; }
-    if (state.isNudgeDisabled) return;
-    if (e && e.type === 'scroll') { if (Math.abs(window.scrollY - lastScrollY) < 50) return; lastScrollY = window.scrollY; }
-    clearTimeout(nudgeTimer); nudgeTimer = setTimeout(() => { if (!state.isNudgeDisabled) createMascot(); }, 30000);
-  }
-  ['mousemove', 'click', 'scroll', 'touchstart'].forEach(evt => document.addEventListener(evt, resetActivityTimer, {passive: true}));
-  resetActivityTimer();
-
-  // --- 5. EMOJI SLAM ---
-  function triggerEmojiSlam(emojiCharacter, coords) {
-    if (!emojiCharacter) return;
-    const slam = document.createElement('div'); slam.innerText = emojiCharacter; slam.className = 'vc-slam-element';
-    slam.style.left = coords.x + 'px'; slam.style.top = coords.y + 'px';
-    document.body.appendChild(slam);
-    setTimeout(() => { if (document.body.contains(slam)) slam.remove(); }, 1200);
+  // Smart Area Nudge Setup (Observer)
+  function attachSmartNudge(element, message) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          // If user stares at element for 3 seconds, trigger mascot
+          setTimeout(() => { if (entry.isIntersecting && !state.isMascotVisible) flyInMascot(message); }, 3000);
+        }
+      });
+    }, { threshold: 0.5 });
+    observer.observe(element);
+    console.log(`🎯 Smart Nudge attached to element:`, element);
   }
 
-  // --- 6. CORE LOGIC & EVENT LISTENERS ---
-  function closeAllMenus() {
-    fabMenu.style.display = 'none'; popup.style.display = 'none'; imgBadge.style.display = 'none';
-    if (state.isInspectMode) toggleInspectMode();
-    window.getSelection().removeAllRanges();
-  }
-
+  // --- 5. CORE INTERACTION LOGIC ---
   function showPopup(left, top) {
-    fabMenu.style.display = 'none'; popup.style.display = 'flex'; imgBadge.style.display = 'none';
+    fabMenu.style.display = 'none'; popup.style.display = 'flex';
     popup.style.top = top + 'px'; popup.style.left = Math.min(Math.max(10, left), window.innerWidth - 230) + 'px'; 
     state.selectedEmoji = null; document.getElementById('vc-text').value = '';
     document.querySelectorAll('.vc-emoji').forEach(el => { el.style.transform = 'scale(1)'; el.style.opacity = '1'; });
@@ -158,108 +158,57 @@ document.addEventListener('DOMContentLoaded', function() {
 
   fab.addEventListener('click', (e) => {
     e.stopPropagation(); dismissMascot(); state.isNudgeDisabled = true;
-    if (state.isInspectMode) return toggleInspectMode();
+    if (state.isInspectMode) return toggleUserInspectMode();
     popup.style.display = 'none'; fabMenu.style.display = fabMenu.style.display === 'block' ? 'none' : 'block';
   });
 
-  // Universal Click-Outside Listener
   document.addEventListener('mousedown', (e) => {
-    if (!isInternalNode(e.target)) { if (!state.isInspectMode) closeAllMenus(); }
-  });
-
-  let selectionTimeout;
-  document.addEventListener('selectionchange', () => {
-    if (popup.style.display === 'flex' || state.isInspectMode) return;
-    clearTimeout(selectionTimeout);
-    selectionTimeout = setTimeout(() => {
-      const selection = window.getSelection();
-      const text = selection.toString().trim();
-      if (text.length > 0) {
-        state.selectedText = text; state.targetElement = selection.anchorNode.parentElement;
-        const rect = selection.getRangeAt(0).getBoundingClientRect();
-        const isMobile = window.innerWidth < 768;
-        const topPosition = isMobile ? (window.scrollY + rect.bottom + 15) : (window.scrollY + rect.top - 170);
-        showPopup(window.scrollX + rect.left + (rect.width / 2) - 110, topPosition);
-      }
-    }, 500); 
-  });
-
-  // --- NON-DESTRUCTIVE IMAGE BADGE (PATCHED) ---
-  function handleImageHover(e) {
-    // Only proceed if it's an image AND it's NOT part of our own widget
-    if (e.target.tagName.toLowerCase() === 'img' && !state.isInspectMode && !isInternalNode(e.target)) {
-      state.activeImage = e.target;
-      const rect = state.activeImage.getBoundingClientRect();
-      imgBadge.style.display = 'block';
-      imgBadge.style.top = (window.scrollY + rect.top + 8) + 'px';
-      imgBadge.style.left = (window.scrollX + rect.right - 70) + 'px';
-    }
-  }
-
-  document.addEventListener('mouseover', handleImageHover);
-  document.addEventListener('touchstart', (e) => { if (e.target.tagName.toLowerCase() === 'img') handleImageHover(e); }, {passive: true});
-
-  document.addEventListener('mousemove', (e) => {
-    if (imgBadge.style.display === 'block' && state.activeImage) {
-      if (!state.activeImage.contains(e.target) && !imgBadge.contains(e.target)) {
-        imgBadge.style.display = 'none';
-      }
+    if (!isInternalNode(e.target) && !state.isInspectMode && !adminState.isAttachingNudge) { 
+      fabMenu.style.display = 'none'; popup.style.display = 'none'; 
     }
   });
 
-  imgBadge.addEventListener('click', (e) => {
-    e.stopPropagation();
-    state.selectedText = '[Image Element]';
-    state.targetElement = state.activeImage;
-    const rect = state.activeImage.getBoundingClientRect();
-    showPopup(window.scrollX + rect.left + (rect.width/2) - 110, window.scrollY + rect.top + (rect.height/2) - 50);
-  });
-
-  // Image Right-Click Fallback (PATCHED)
-  document.addEventListener('contextmenu', function(e) {
-    if (e.target.tagName.toLowerCase() === 'img' && !state.isInspectMode && !isInternalNode(e.target)) {
-      e.preventDefault(); 
-      state.selectedText = '[Image Element]'; state.targetElement = e.target;
-      showPopup(e.pageX, e.pageY);
-    }
-  });
-
-  // Inspect Mode
+  // User Inspect Mode
   function handleInspectHover(e) {
-    if (!state.isInspectMode || isInternalNode(e.target)) return;
+    if (isInternalNode(e.target)) return;
     if (state.hoveredElement && state.hoveredElement !== e.target) {
       state.hoveredElement.style.outline = state.originalOutline; state.hoveredElement.style.cursor = state.originalCursor;
     }
     state.hoveredElement = e.target; state.originalOutline = e.target.style.outline; state.originalCursor = e.target.style.cursor;
-    e.target.style.outline = '2px dashed #3b82f6'; e.target.style.outlineOffset = '2px'; e.target.style.cursor = 'crosshair';
+    e.target.style.outline = '2px dashed #3b82f6'; e.target.style.cursor = 'crosshair';
   }
 
   function handleInspectClick(e) {
-    if (!state.isInspectMode || isInternalNode(e.target)) return;
+    if (isInternalNode(e.target)) return;
     e.preventDefault(); e.stopPropagation();
-    state.targetElement = e.target; state.selectedText = '[Inspected Element]';
-    toggleInspectMode(); showPopup(e.pageX, e.pageY);
-  }
-
-  function toggleInspectMode() {
-    state.isInspectMode = !state.isInspectMode;
-    const btn = document.getElementById('vc-inspect-btn');
-    if (state.isInspectMode) {
-      btn.innerHTML = '🛑 Cancel Inspect Mode'; btn.style.background = '#fee2e2'; btn.style.color = '#991b1b'; btn.style.borderColor = '#f87171';
-      fabMenu.style.display = 'none';
-      document.body.addEventListener('mouseover', handleInspectHover); document.body.addEventListener('click', handleInspectClick, true);
+    
+    if (adminState.isAttachingNudge) {
+      // ADMIN MODE: Attaching a smart nudge
+      const msg = prompt("Target Acquired! What should the Mascot say if the user stares at this element?", "Are you stuck?");
+      if (msg) attachSmartNudge(e.target, msg);
+      toggleAdminNudgeMode();
     } else {
-      btn.innerHTML = '<span>🔍</span> Enter Inspect Mode'; btn.style.background = '#f0f0f0'; btn.style.color = '#111'; btn.style.borderColor = '#ddd';
-      if (state.hoveredElement) {
-        state.hoveredElement.style.outline = state.originalOutline; state.hoveredElement.style.cursor = state.originalCursor; state.hoveredElement = null;
-      }
-      document.body.removeEventListener('mouseover', handleInspectHover); document.body.removeEventListener('click', handleInspectClick, true);
+      // USER MODE: Leaving feedback
+      state.targetElement = e.target; state.selectedText = '[Selected Element]';
+      toggleUserInspectMode(); showPopup(e.pageX, e.pageY);
     }
   }
 
-  document.getElementById('vc-inspect-btn').addEventListener('click', toggleInspectMode);
+  function toggleUserInspectMode() {
+    state.isInspectMode = !state.isInspectMode;
+    const btn = document.getElementById('vc-inspect-btn');
+    if (state.isInspectMode) {
+      btn.innerHTML = '🛑 Cancel Select'; fabMenu.style.display = 'none';
+      document.body.addEventListener('mouseover', handleInspectHover); document.body.addEventListener('click', handleInspectClick, true);
+    } else {
+      btn.innerHTML = '<span>🔍</span> Select Element to Rate';
+      if (state.hoveredElement) { state.hoveredElement.style.outline = state.originalOutline; state.hoveredElement.style.cursor = state.originalCursor; state.hoveredElement = null; }
+      document.body.removeEventListener('mouseover', handleInspectHover); document.body.removeEventListener('click', handleInspectClick, true);
+    }
+  }
+  document.getElementById('vc-inspect-btn').addEventListener('click', toggleUserInspectMode);
 
-  // --- 7. SUBMISSION LOGIC ---
+  // --- 6. SUBMISSION & CONSOLE LOGGING ---
   document.querySelectorAll('.vc-emoji').forEach(emoji => {
     emoji.addEventListener('click', function() {
       state.selectedEmoji = this.innerText;
@@ -270,23 +219,106 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.getElementById('vc-submit').addEventListener('click', (e) => {
     const textNote = document.getElementById('vc-text').value.trim();
-    if (!state.selectedEmoji && !textNote) return alert("Please select an emoji or write a note.");
+    if (!state.selectedEmoji) return alert("Please select an emoji rating!");
 
-    if (state.selectedEmoji) triggerEmojiSlam(state.selectedEmoji, { x: e.clientX || window.innerWidth/2, y: e.clientY || window.innerHeight/2 }); 
+    // SLAM ANIMATION
+    const slam = document.createElement('div'); slam.innerText = state.selectedEmoji; slam.className = 'vc-slam-element';
+    slam.style.left = (e.clientX || window.innerWidth/2) + 'px'; slam.style.top = (e.clientY || window.innerHeight/2) + 'px';
+    document.body.appendChild(slam); setTimeout(() => slam.remove(), 1200);
 
-    console.log('🚀 Element Feedback Payload:', {
-      type: 'element_feedback', feedback_type: state.selectedEmoji && textNote ? 'both' : (state.selectedEmoji ? 'emoji' : 'text'),
-      emoji: state.selectedEmoji, content: textNote, highlighted_text: state.selectedText, element_metadata: generateResilientPath(state.targetElement)
+    // 🔥 THE FULL DATA PAYLOAD (including Silent Analytics) 🔥
+    console.log('🚀 [VibeCheck] Feedback Captured!', {
+      feedback: {
+        type: 'contextual_rating',
+        emoji_score: state.selectedEmoji, 
+        written_context: textNote, 
+        highlighted_text: state.selectedText, 
+        dom_path: generateResilientPath(state.targetElement)
+      },
+      analytics: getSilentAnalytics() // Browser, OS, Screen, Timezone
     });
-    closeAllMenus();
+    
+    popup.style.display = 'none';
   });
 
-  document.getElementById('vc-gen-submit').addEventListener('click', () => {
-    const textNote = document.getElementById('vc-gen-text').value.trim();
-    if (!textNote) return alert("Please enter some feedback first.");
-    console.log('🚀 General Feedback Payload:', { type: 'general_feedback', content: textNote, url: window.location.href });
-    closeAllMenus(); document.getElementById('vc-gen-text').value = '';
+  // --- 7. ADMIN HUD & PRO TIER FEATURES ---
+  const adminState = { isLoggedIn: false, isAttachingNudge: false };
+
+  const adminPanel = document.createElement('div');
+  adminPanel.id = 'vc-admin-panel';
+  Object.assign(adminPanel.style, {
+    position: 'fixed', top: '0', left: '0', width: '100%', background: '#171717', color: 'white',
+    padding: '12px 20px', zIndex: '10000000', display: 'none', justifyContent: 'space-between',
+    alignItems: 'center', fontFamily: fontFamily, fontSize: '13px', boxSizing: 'border-box'
   });
+  
+  adminPanel.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <strong>🟢 VibeCheck Pro HUD</strong>
+      
+      <div style="display:flex; align-items:center; gap:6px; background:#333; padding:4px 8px; border-radius:6px;">
+        <label>Brand Color:</label>
+        <input type="color" id="vc-admin-color" value="#171717" style="border:none; width:24px; height:24px; cursor:pointer; padding:0; background:transparent;">
+      </div>
+
+      <div style="display:flex; align-items:center; gap:6px; background:#333; padding:4px 8px; border-radius:6px;">
+        <label>Custom Q:</label>
+        <input type="text" id="vc-admin-q" value="Tell us more? (optional)" style="background:transparent; border:none; color:white; outline:none; width:180px; font-size:12px;">
+      </div>
+
+      <button id="vc-admin-nudge-btn" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight:bold;">🎯 Attach Smart Nudge</button>
+    </div>
+    <button id="vc-admin-logout" style="background: transparent; color: #f87171; border: 1px solid #f87171; padding: 4px 12px; border-radius: 4px; cursor: pointer;">Exit HUD</button>
+  `;
+  document.body.appendChild(adminPanel);
+
+  // Admin Log In
+  document.getElementById('vc-admin-login').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (prompt("Admin Username:") === 'admin' && prompt("Password:") === 'password') {
+      adminState.isLoggedIn = true;
+      fabMenu.style.display = 'none'; popup.style.display = 'none';
+      adminPanel.style.display = 'flex';
+      alert("Welcome to the HUD. Try changing the brand color, custom question, or attaching a Smart Area Nudge!");
+    } else alert("Invalid credentials.");
+  });
+
+  // Admin Log Out
+  document.getElementById('vc-admin-logout').addEventListener('click', () => {
+    adminState.isLoggedIn = false; adminPanel.style.display = 'none';
+    if(adminState.isAttachingNudge) toggleAdminNudgeMode();
+  });
+
+  // Color Picker Logic
+  document.getElementById('vc-admin-color').addEventListener('input', (e) => {
+    state.themeColor = e.target.value;
+    fab.style.backgroundColor = state.themeColor;
+    document.getElementById('vc-gen-submit').style.backgroundColor = state.themeColor;
+    document.getElementById('vc-submit').style.backgroundColor = state.themeColor;
+  });
+
+  // Custom Question Logic
+  document.getElementById('vc-admin-q').addEventListener('input', (e) => {
+    state.customQuestion = e.target.value;
+    document.getElementById('vc-text').placeholder = state.customQuestion;
+    document.getElementById('vc-menu-title').innerText = state.customQuestion;
+  });
+
+  // Smart Nudge Admin Logic
+  function toggleAdminNudgeMode() {
+    adminState.isAttachingNudge = !adminState.isAttachingNudge;
+    const btn = document.getElementById('vc-admin-nudge-btn');
+    if (adminState.isAttachingNudge) {
+      btn.innerHTML = '🛑 Cancel Nudge Attachment'; btn.style.background = '#ef4444';
+      document.body.addEventListener('mouseover', handleInspectHover); document.body.addEventListener('click', handleInspectClick, true);
+    } else {
+      btn.innerHTML = '🎯 Attach Smart Nudge'; btn.style.background = '#3b82f6';
+      if (state.hoveredElement) { state.hoveredElement.style.outline = state.originalOutline; state.hoveredElement.style.cursor = state.originalCursor; state.hoveredElement = null; }
+      document.body.removeEventListener('mouseover', handleInspectHover); document.body.removeEventListener('click', handleInspectClick, true);
+    }
+  }
+  document.getElementById('vc-admin-nudge-btn').addEventListener('click', toggleAdminNudgeMode);
+
 });
 </script>
 <style>
