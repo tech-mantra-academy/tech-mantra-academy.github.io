@@ -7,7 +7,7 @@
 <title>Tech Mantra Academy | Learn. Build. Get Hired.</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
+ <script>
 document.addEventListener('DOMContentLoaded', function() {
   
   // --- 0. INJECT CSS DYNAMICALLY ---
@@ -21,53 +21,35 @@ document.addEventListener('DOMContentLoaded', function() {
       35% { transform: translate(-50%, -50%) scale(1.5) rotate(0deg); }
       100% { transform: translate(-50%, -150%) scale(1.2); opacity: 0; }
     }
-    .vc-slam-element {
-      position: fixed; font-size: 5rem; pointer-events: none; z-index: 9999999;
-      animation: vc-emoji-slam 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-    }
+    .vc-slam-element { position: fixed; font-size: 5rem; pointer-events: none; z-index: 9999999; animation: vc-emoji-slam 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+    .vc-frame { display: none; flex-direction: column; }
+    .vc-frame.active { display: flex; }
   `;
   document.head.appendChild(styleBlock);
 
   // --- 1. STATE & THEME MANAGEMENT ---
   const state = {
-    targetElement: null, selectedText: '', selectedEmoji: null,
+    targetElement: null, selectedText: '', selectedEmoji: null, textNote: '',
     isInspectMode: false, hoveredElement: null, originalOutline: '', originalCursor: '',
-    isNudgeDisabled: false, isMascotVisible: false,
-    themeColor: '#171717',
-    customQuestion: 'Tell us more? (optional)'
+    isNudgeDisabled: false, isMascotVisible: false, themeColor: '#171717', customQuestion: 'Tell us more? (optional)'
   };
-
+  const adminState = { isLoggedIn: false, isAttachingNudge: false };
   const fontFamily = 'system-ui, -apple-system, sans-serif';
   const zIndex = '999999';
 
   // --- 2. SILENT ANALYTICS ---
   function getSilentAnalytics() {
     const ua = navigator.userAgent;
-    let browser = "Unknown", os = "Unknown";
-    if (ua.includes("Firefox")) browser = "Firefox";
-    else if (ua.includes("Chrome")) browser = "Chrome";
-    else if (ua.includes("Safari")) browser = "Safari";
-    if (ua.includes("Win")) os = "Windows";
-    else if (ua.includes("Mac")) os = "MacOS";
-    else if (ua.includes("Linux")) os = "Linux";
-    else if (ua.includes("Android")) os = "Android";
-    else if (ua.includes("like Mac")) os = "iOS";
     return {
-      browser, os, screenSize: `${window.innerWidth}x${window.innerHeight}`,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      browser: ua.includes("Firefox") ? "Firefox" : ua.includes("Chrome") ? "Chrome" : ua.includes("Safari") ? "Safari" : "Unknown",
+      os: ua.includes("Win") ? "Windows" : ua.includes("Mac") ? "MacOS" : "Unknown",
+      screenSize: `${window.innerWidth}x${window.innerHeight}`
     };
   }
 
   function generateResilientPath(element) {
     if (!element || !(element instanceof Element)) return null;
-    const getDirectText = (el) => Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent.trim()).join(' ').substring(0, 60);
-    const pathData = { target: { tagName: element.tagName.toLowerCase(), id: element.id || null, className: element.className || null, textNode: getDirectText(element) }, ancestry: [] };
-    let current = element.parentElement, depth = 0;
-    while (current && depth < 4) {
-      pathData.ancestry.push({ tagName: current.tagName.toLowerCase(), id: current.id || null, className: current.className || null });
-      if (current.id) break; current = current.parentElement; depth++;
-    }
-    return JSON.stringify(pathData);
+    return JSON.stringify({ tagName: element.tagName.toLowerCase(), id: element.id || null, className: element.className || null });
   }
 
   // --- 3. UI CREATION (USER FACING) ---
@@ -79,11 +61,13 @@ document.addEventListener('DOMContentLoaded', function() {
   const fabMenu = document.createElement('div');
   Object.assign(fabMenu.style, { position: 'fixed', bottom: '85px', right: '20px', width: '280px', backgroundColor: '#ffffff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '16px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', display: 'none', zIndex: zIndex, fontFamily: fontFamily });
   
-  // Notice: The menu is split into two views (Main vs Login)
   fabMenu.innerHTML = `
     <!-- VIEW 1: Main Feedback -->
     <div id="vc-view-main">
-      <h4 id="vc-menu-title" style="margin: 0 0 8px 0; font-size: 14px; color: #111;">What do you think of this page?</h4>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+        <h4 id="vc-menu-title" style="margin: 0; font-size: 14px; color: #111;">What do you think?</h4>
+        <span style="background: #fef08a; color: #854d0e; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">🔥 124 Vibes</span>
+      </div>
       <textarea id="vc-gen-text" placeholder="Type your thoughts..." style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: inherit;"></textarea>
       <button id="vc-gen-submit" style="width: 100%; background: ${state.themeColor}; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; margin-bottom: 12px; transition: background-color 0.3s;">Send Feedback</button>
       <button id="vc-inspect-btn" style="width: 100%; background: #f0f0f0; color: #111; border: 1px solid #ddd; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; display: flex; justify-content: center; align-items: center; gap: 6px;"><span>🔍</span> Select Element to Rate</button>
@@ -104,261 +88,207 @@ document.addEventListener('DOMContentLoaded', function() {
   `;
   document.body.appendChild(fabMenu);
 
+  // --- 4. THE 3-FRAME POPUP ARCHITECTURE ---
   const popup = document.createElement('div');
+  Object.assign(popup.style, { position: 'absolute', backgroundColor: '#ffffff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', display: 'none', width: '240px', zIndex: zIndex, fontFamily: fontFamily });
+  
   popup.innerHTML = `
-    <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 12px;" id="vc-emojis">
-      <span class="vc-emoji" style="cursor:pointer; font-size:22px;">🤩</span>
-      <span class="vc-emoji" style="cursor:pointer; font-size:22px;">🙂</span>
-      <span class="vc-emoji" style="cursor:pointer; font-size:22px;">😕</span>
-      <span class="vc-emoji" style="cursor:pointer; font-size:22px;">😡</span>
+    <!-- Frame 1: The Rating Bar -->
+    <div id="vc-frame-1" class="vc-frame active">
+      <p style="margin: 0 0 12px 0; font-size: 13px; font-weight: bold; text-align: center;">Rate this element:</p>
+      <div style="display: flex; gap: 12px; justify-content: center; background: #f8fafc; padding: 8px; border-radius: 20px; border: 1px solid #e2e8f0;">
+        <span class="vc-emoji" style="cursor:pointer; font-size:24px; transition: transform 0.2s;">🤩</span>
+        <span class="vc-emoji" style="cursor:pointer; font-size:24px; transition: transform 0.2s;">🙂</span>
+        <span class="vc-emoji" style="cursor:pointer; font-size:24px; transition: transform 0.2s;">😕</span>
+        <span class="vc-emoji" style="cursor:pointer; font-size:24px; transition: transform 0.2s;">😡</span>
+      </div>
     </div>
-    <textarea id="vc-text" placeholder="${state.customQuestion}" style="width: 100%; height: 50px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: ${fontFamily};"></textarea>
-    <button id="vc-submit" style="width: 100%; background: ${state.themeColor}; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; font-family: ${fontFamily};">Submit</button>
+
+    <!-- Frame 2: The Context -->
+    <div id="vc-frame-2" class="vc-frame">
+      <p id="vc-q-label" style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold;">Tell us more? (optional)</p>
+      <textarea id="vc-text" style="width: 100%; height: 50px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; resize: none; box-sizing: border-box; font-family: inherit;"></textarea>
+      <button id="vc-f2-submit" style="width: 100%; background: ${state.themeColor}; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px;">Next</button>
+    </div>
+
+    <!-- Frame 3: Testimonial Lead Gen -->
+    <div id="vc-frame-3" class="vc-frame">
+      <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; color: #16a34a;">Glad you love it!</p>
+      <p style="margin: 0 0 12px 0; font-size: 11px; color: #64748b;">Can we feature this on our site?</p>
+      <input type="text" id="vc-test-name" placeholder="Name" style="width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 6px 8px; font-size: 12px; margin-bottom: 6px; box-sizing: border-box;">
+      <input type="text" id="vc-test-handle" placeholder="X Handle (Optional)" style="width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 6px 8px; font-size: 12px; margin-bottom: 12px; box-sizing: border-box;">
+      <button id="vc-f3-submit" style="width: 100%; background: #111; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px;">Submit Testimonial</button>
+    </div>
   `;
-  Object.assign(popup.style, { position: 'absolute', backgroundColor: '#ffffff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', display: 'none', flexDirection: 'column', width: '220px', zIndex: zIndex });
   document.body.appendChild(popup);
 
-  function isInternalNode(node) {
-    return fab.contains(node) || fabMenu.contains(node) || popup.contains(node) || document.getElementById('vc-admin-panel')?.contains(node);
+  function isInternalNode(node) { return fab.contains(node) || fabMenu.contains(node) || popup.contains(node) || document.getElementById('vc-admin-panel')?.contains(node) || document.getElementById('vc-mascot')?.contains(node); }
+
+  // --- 5. SMART NUDGE LOGIC ---
+  function flyInMascot(message) {
+    if (document.getElementById('vc-mascot')) return;
+    const mascot = document.createElement('div'); mascot.id = 'vc-mascot';
+    mascot.innerHTML = `<div style="background: white; border: 1px solid #ddd; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-family: ${fontFamily}; box-shadow: 0 4px 12px rgba(0,0,0,0.1); white-space: nowrap;">${message}</div><div style="font-size: 32px; transform: scaleX(-1);">🕊️</div>`;
+    Object.assign(mascot.style, { position: 'fixed', bottom: '90px', right: '-300px', display: 'flex', alignItems: 'center', gap: '8px', zIndex: '999998', transition: 'right 0.8s', cursor: 'pointer' });
+    document.body.appendChild(mascot);
+    setTimeout(() => { mascot.style.right = '20px'; mascot.style.animation = 'vc-float 3s ease-in-out infinite'; }, 100);
+    mascot.onclick = () => { mascot.remove(); fab.click(); };
   }
 
-  // --- 4. CORE INTERACTION LOGIC ---
-  
-  // Toggle the main FAB Menu
+  function attachSmartNudge(element, message) {
+    new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) setTimeout(() => { if (entry.isIntersecting) flyInMascot(message); }, 3000); });
+    }, { threshold: 0.5 }).observe(element);
+    console.log(`🎯 Nudge attached!`);
+  }
+
+  // --- 6. CORE INTERACTION LOGIC ---
+  function showPopup(left, top) {
+    fabMenu.style.display = 'none'; popup.style.display = 'block';
+    popup.style.top = top + 'px'; popup.style.left = Math.min(Math.max(10, left), window.innerWidth - 250) + 'px'; 
+    document.getElementById('vc-frame-1').classList.add('active');
+    document.getElementById('vc-frame-2').classList.remove('active');
+    document.getElementById('vc-frame-3').classList.remove('active');
+    document.getElementById('vc-text').value = '';
+  }
+
   fab.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (state.isInspectMode) return toggleUserInspectMode();
-    popup.style.display = 'none'; 
-    fabMenu.style.display = fabMenu.style.display === 'block' ? 'none' : 'block';
+    e.stopPropagation(); if (document.getElementById('vc-mascot')) document.getElementById('vc-mascot').remove();
+    if (state.isInspectMode) return toggleInspectMode();
+    popup.style.display = 'none'; fabMenu.style.display = fabMenu.style.display === 'block' ? 'none' : 'block';
   });
 
-  // Click outside to close (Fixed)
   document.addEventListener('mousedown', (e) => {
-    if (!isInternalNode(e.target) && !state.isInspectMode) { 
-      fabMenu.style.display = 'none'; 
-      popup.style.display = 'none'; 
-      window.getSelection().removeAllRanges(); // Clear selection when clicking away
+    if (!isInternalNode(e.target) && !state.isInspectMode && !adminState.isAttachingNudge) { 
+      fabMenu.style.display = 'none'; popup.style.display = 'none'; window.getSelection().removeAllRanges(); 
     }
   });
 
-  // Highlight Text Selection (Fixed - Swapped to mouseup for reliability)
   document.addEventListener('mouseup', () => {
-    if (popup.style.display === 'flex' || state.isInspectMode || fabMenu.style.display === 'block') return;
-    
+    if (popup.style.display === 'block' || state.isInspectMode || fabMenu.style.display === 'block') return;
     setTimeout(() => {
-      const selection = window.getSelection();
-      const text = selection.toString().trim();
+      const selection = window.getSelection(); const text = selection.toString().trim();
       if (text.length > 0) {
-        state.selectedText = text;
-        state.targetElement = selection.anchorNode.parentElement;
+        state.selectedText = text; state.targetElement = selection.anchorNode.parentElement;
         const rect = selection.getRangeAt(0).getBoundingClientRect();
-        
-        // Position popup directly above the text
-        popup.style.display = 'flex';
-        popup.style.top = (window.scrollY + rect.top - 160) + 'px'; 
-        popup.style.left = Math.min(Math.max(10, window.scrollX + rect.left + (rect.width / 2) - 110), window.innerWidth - 230) + 'px';
-        
-        state.selectedEmoji = null; document.getElementById('vc-text').value = '';
-        document.querySelectorAll('.vc-emoji').forEach(el => { el.style.transform = 'scale(1)'; el.style.opacity = '1'; });
+        showPopup(window.scrollX + rect.left + (rect.width / 2) - 120, window.scrollY + rect.top - 140);
       }
     }, 10);
   });
 
-  // Inspect Mode (Select Element to Rate)
-  function handleInspectHover(e) {
-    if (isInternalNode(e.target)) return;
-    if (state.hoveredElement && state.hoveredElement !== e.target) {
-      state.hoveredElement.style.outline = state.originalOutline; state.hoveredElement.style.cursor = state.originalCursor;
-    }
-    state.hoveredElement = e.target; state.originalOutline = e.target.style.outline; state.originalCursor = e.target.style.cursor;
-    e.target.style.outline = '2px dashed #3b82f6'; e.target.style.cursor = 'crosshair';
-  }
-
-  function handleInspectClick(e) {
-    if (isInternalNode(e.target)) return;
-    e.preventDefault(); e.stopPropagation();
-    state.targetElement = e.target; state.selectedText = '[Selected Element]';
-    toggleUserInspectMode(); 
-    
-    popup.style.display = 'flex';
-    popup.style.top = e.pageY + 'px'; 
-    popup.style.left = e.pageX + 'px';
-  }
-
-  function toggleUserInspectMode() {
+  function toggleInspectMode() {
     state.isInspectMode = !state.isInspectMode;
     const btn = document.getElementById('vc-inspect-btn');
     if (state.isInspectMode) {
       btn.innerHTML = '🛑 Cancel Select'; fabMenu.style.display = 'none';
-      document.body.addEventListener('mouseover', handleInspectHover); document.body.addEventListener('click', handleInspectClick, true);
+      document.body.addEventListener('mouseover', handleHover); document.body.addEventListener('click', handleClick, true);
     } else {
       btn.innerHTML = '<span>🔍</span> Select Element to Rate';
-      if (state.hoveredElement) { state.hoveredElement.style.outline = state.originalOutline; state.hoveredElement.style.cursor = state.originalCursor; state.hoveredElement = null; }
-      document.body.removeEventListener('mouseover', handleInspectHover); document.body.removeEventListener('click', handleInspectClick, true);
+      if (state.hoveredElement) { state.hoveredElement.style.outline = state.originalOutline; state.hoveredElement = null; }
+      document.body.removeEventListener('mouseover', handleHover); document.body.removeEventListener('click', handleClick, true);
     }
   }
-  document.getElementById('vc-inspect-btn').addEventListener('click', toggleUserInspectMode);
 
-  // --- 5. SUBMISSION & CONSOLE LOGGING ---
+  function handleHover(e) {
+    if (isInternalNode(e.target)) return;
+    if (state.hoveredElement) state.hoveredElement.style.outline = state.originalOutline;
+    state.hoveredElement = e.target; state.originalOutline = e.target.style.outline;
+    e.target.style.outline = adminState.isAttachingNudge ? '2px dashed #f59e0b' : '2px dashed #3b82f6';
+  }
+
+  function handleClick(e) {
+    if (isInternalNode(e.target)) return;
+    e.preventDefault(); e.stopPropagation();
+    
+    if (adminState.isAttachingNudge) {
+      const msg = prompt("What should the Mascot say if the user stares at this?", "Are you stuck?");
+      if (msg) attachSmartNudge(e.target, msg);
+      toggleAdminNudgeMode();
+    } else {
+      state.targetElement = e.target; state.selectedText = '[Element Selected]';
+      toggleInspectMode(); showPopup(e.pageX, e.pageY);
+    }
+  }
+
+  document.getElementById('vc-inspect-btn').addEventListener('click', toggleInspectMode);
+
+  // --- 7. THE 3-FRAME SUBMISSION LOGIC ---
   
-  // General Feedback Submission (Fixed)
-  document.getElementById('vc-gen-submit').addEventListener('click', () => {
-    const textNote = document.getElementById('vc-gen-text').value.trim();
-    if (!textNote) return alert("Please enter some feedback first.");
-    
-    console.log('🚀 [VibeCheck] General Feedback Captured!', {
-      type: 'general_feedback', 
-      content: textNote, 
-      url: window.location.href,
-      analytics: getSilentAnalytics()
-    });
-    
-    // Clear and close
-    document.getElementById('vc-gen-text').value = '';
-    fabMenu.style.display = 'none';
-    
-    // Quick success slam
-    const slam = document.createElement('div'); slam.innerText = "✅"; slam.className = 'vc-slam-element';
-    slam.style.left = window.innerWidth/2 + 'px'; slam.style.top = window.innerHeight/2 + 'px';
-    document.body.appendChild(slam); setTimeout(() => slam.remove(), 1200);
-  });
-
-  // Contextual Emoji Submission
+  // Frame 1 -> Frame 2
   document.querySelectorAll('.vc-emoji').forEach(emoji => {
     emoji.addEventListener('click', function() {
       state.selectedEmoji = this.innerText;
-      document.querySelectorAll('.vc-emoji').forEach(el => { el.style.transform = 'scale(0.8)'; el.style.opacity = '0.5'; });
-      this.style.transform = 'scale(1.3)'; this.style.opacity = '1';
+      
+      const slam = document.createElement('div'); slam.innerText = state.selectedEmoji; slam.className = 'vc-slam-element';
+      slam.style.left = window.innerWidth/2 + 'px'; slam.style.top = window.innerHeight/2 + 'px';
+      document.body.appendChild(slam); setTimeout(() => slam.remove(), 1200);
+
+      document.getElementById('vc-frame-1').classList.remove('active');
+      document.getElementById('vc-frame-2').classList.add('active');
     });
   });
 
-  document.getElementById('vc-submit').addEventListener('click', (e) => {
-    const textNote = document.getElementById('vc-text').value.trim();
-    if (!state.selectedEmoji) return alert("Please select an emoji rating!");
-
-    const slam = document.createElement('div'); slam.innerText = state.selectedEmoji; slam.className = 'vc-slam-element';
-    slam.style.left = (e.clientX || window.innerWidth/2) + 'px'; slam.style.top = (e.clientY || window.innerHeight/2) + 'px';
-    document.body.appendChild(slam); setTimeout(() => slam.remove(), 1200);
-
-    console.log('🚀 [VibeCheck] Context Feedback Captured!', {
-      feedback: {
-        type: 'contextual_rating', emoji_score: state.selectedEmoji, 
-        written_context: textNote, highlighted_text: state.selectedText, 
-        dom_path: generateResilientPath(state.targetElement)
-      },
-      analytics: getSilentAnalytics()
-    });
+  // Frame 2 -> Frame 3 (Conditional)
+  document.getElementById('vc-f2-submit').addEventListener('click', () => {
+    state.textNote = document.getElementById('vc-text').value.trim();
+    const isPositive = ['🤩', '🙂'].includes(state.selectedEmoji);
     
-    popup.style.display = 'none';
-    window.getSelection().removeAllRanges();
-  });
-
-  // --- 6. ADMIN HUD & INLINE LOGIN ---
-  const adminPanel = document.createElement('div');
-  adminPanel.id = 'vc-admin-panel';
-  Object.assign(adminPanel.style, {
-    position: 'fixed', top: '0', left: '0', width: '100%', background: '#171717', color: 'white',
-    padding: '12px 20px', zIndex: '10000000', display: 'none', justifyContent: 'space-between',
-    alignItems: 'center', fontFamily: fontFamily, fontSize: '13px', boxSizing: 'border-box'
-  });
-  
-  // Notice: The Top bar now includes a Save button
-  adminPanel.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 16px;">
-      <strong>🟢 VibeCheck Pro HUD</strong>
-      
-      <div style="display:flex; align-items:center; gap:6px; background:#333; padding:4px 8px; border-radius:6px;">
-        <label>Brand Color:</label>
-        <input type="color" id="vc-admin-color" value="#171717" style="border:none; width:24px; height:24px; cursor:pointer; padding:0; background:transparent;">
-      </div>
-
-      <div style="display:flex; align-items:center; gap:6px; background:#333; padding:4px 8px; border-radius:6px;">
-        <label>Custom Q:</label>
-        <input type="text" id="vc-admin-q" value="Tell us more? (optional)" style="background:transparent; border:none; color:white; outline:none; width:180px; font-size:12px;">
-      </div>
-
-      <button id="vc-admin-save" style="background: #10b981; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-weight:bold;">Save Changes</button>
-    </div>
-    <button id="vc-admin-logout" style="background: transparent; color: #f87171; border: 1px solid #f87171; padding: 4px 12px; border-radius: 4px; cursor: pointer;">Exit HUD</button>
-  `;
-  document.body.appendChild(adminPanel);
-
-  // Inline Login View Toggles
-  const viewMain = document.getElementById('vc-view-main');
-  const viewLogin = document.getElementById('vc-view-login');
-  
-  document.getElementById('vc-open-login').addEventListener('click', (e) => {
-    e.preventDefault();
-    viewMain.style.display = 'none';
-    viewLogin.style.display = 'block';
-    document.getElementById('vc-login-error').style.display = 'none';
-  });
-
-  document.getElementById('vc-login-back').addEventListener('click', (e) => {
-    e.preventDefault();
-    viewLogin.style.display = 'none';
-    viewMain.style.display = 'block';
-  });
-
-  // Execute Login
-  document.getElementById('vc-do-login').addEventListener('click', () => {
-    const user = document.getElementById('vc-admin-user').value;
-    const pass = document.getElementById('vc-admin-pass').value;
-    
-    if (user === 'admin' && pass === 'password') {
-      // Success
-      fabMenu.style.display = 'none';
-      adminPanel.style.display = 'flex';
-      
-      // Reset login form for next time
-      document.getElementById('vc-admin-user').value = '';
-      document.getElementById('vc-admin-pass').value = '';
-      viewLogin.style.display = 'none';
-      viewMain.style.display = 'block';
+    if (isPositive) {
+      document.getElementById('vc-frame-2').classList.remove('active');
+      document.getElementById('vc-frame-3').classList.add('active');
     } else {
-      document.getElementById('vc-login-error').style.display = 'block';
+      finalizeFeedback(); // Negative ratings skip the testimonial frame
     }
   });
 
-  // Admin HUD Interactions
-  document.getElementById('vc-admin-logout').addEventListener('click', () => {
-    adminPanel.style.display = 'none';
-  });
+  // Frame 3 Submit
+  document.getElementById('vc-f3-submit').addEventListener('click', finalizeFeedback);
 
-  document.getElementById('vc-admin-color').addEventListener('input', (e) => {
-    state.themeColor = e.target.value;
-    fab.style.backgroundColor = state.themeColor;
-    document.getElementById('vc-gen-submit').style.backgroundColor = state.themeColor;
-    document.getElementById('vc-submit').style.backgroundColor = state.themeColor;
-  });
-
-  document.getElementById('vc-admin-q').addEventListener('input', (e) => {
-    state.customQuestion = e.target.value;
-    document.getElementById('vc-text').placeholder = state.customQuestion;
-    document.getElementById('vc-menu-title').innerText = state.customQuestion;
-  });
-
-  // HUD Save Button Logic (Fixed)
-  document.getElementById('vc-admin-save').addEventListener('click', (e) => {
-    const btn = e.target;
-    const originalText = btn.innerText;
-    
-    // Log the configuration to simulate saving to a backend
-    console.log('💾 [Admin] Settings Saved to Supabase (Mocked):', {
-      theme_color: state.themeColor,
-      custom_prompt: state.customQuestion,
-      timestamp: new Date().toISOString()
+  function finalizeFeedback() {
+    console.log('🚀 [VibeCheck] Payload Saved:', {
+      emoji: state.selectedEmoji, text: state.textNote, highlighted: state.selectedText,
+      testimonial_name: document.getElementById('vc-test-name')?.value || null,
+      testimonial_handle: document.getElementById('vc-test-handle')?.value || null,
+      dom: generateResilientPath(state.targetElement), analytics: getSilentAnalytics()
     });
+    popup.style.display = 'none'; window.getSelection().removeAllRanges();
+  }
 
-    // Provide visual success feedback
-    btn.innerText = '✅ Saved!';
-    btn.style.background = '#059669'; // Darker green
-    
-    setTimeout(() => {
-      btn.innerText = originalText;
-      btn.style.background = '#10b981'; // Original green
-    }, 2000);
-  });
+  // --- 8. ADMIN HUD & PRO TIER ---
+  const adminPanel = document.createElement('div'); adminPanel.id = 'vc-admin-panel';
+  Object.assign(adminPanel.style, { position: 'fixed', top: '0', left: '0', width: '100%', background: '#171717', color: 'white', padding: '12px 20px', zIndex: '10000000', display: 'none', justifyContent: 'space-between', alignItems: 'center', fontFamily: fontFamily, fontSize: '13px', boxSizing: 'border-box' });
+  
+  adminPanel.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <strong>🟢 VibeCheck Pro HUD</strong>
+      <div style="display:flex; gap:6px; background:#333; padding:4px 8px; border-radius:6px;"><label>Color:</label><input type="color" id="vc-admin-color" value="#171717" style="border:none; width:24px; height:24px; cursor:pointer; padding:0; background:transparent;"></div>
+      <div style="display:flex; gap:6px; background:#333; padding:4px 8px; border-radius:6px;"><label>Q:</label><input type="text" id="vc-admin-q" value="Tell us more?" style="background:transparent; border:none; color:white; outline:none; width:120px; font-size:12px;"></div>
+      <button id="vc-admin-nudge-btn" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight:bold;">🎯 Attach Smart Nudge</button>
+      <button id="vc-admin-save" style="background: #10b981; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-weight:bold;">Save Changes</button>
+    </div>
+    <button id="vc-admin-logout" style="background: transparent; color: #f87171; border: 1px solid #f87171; padding: 4px 12px; border-radius: 4px; cursor: pointer;">Exit</button>
+  `;
+  document.body.appendChild(adminPanel);
+
+  // Login UI logic
+  document.getElementById('vc-open-login').onclick = (e) => { e.preventDefault(); document.getElementById('vc-view-main').style.display='none'; document.getElementById('vc-view-login').style.display='block'; document.getElementById('vc-login-error').style.display='none'; };
+  document.getElementById('vc-login-back').onclick = (e) => { e.preventDefault(); document.getElementById('vc-view-login').style.display='none'; document.getElementById('vc-view-main').style.display='block'; };
+  document.getElementById('vc-do-login').onclick = () => { if (document.getElementById('vc-admin-user').value === 'admin' && document.getElementById('vc-admin-pass').value === 'password') { fabMenu.style.display = 'none'; adminPanel.style.display = 'flex'; document.getElementById('vc-view-login').style.display='none'; document.getElementById('vc-view-main').style.display='block'; } else document.getElementById('vc-login-error').style.display='block'; };
+  
+  // HUD Actions
+  document.getElementById('vc-admin-logout').onclick = () => adminPanel.style.display = 'none';
+  document.getElementById('vc-admin-color').oninput = (e) => { state.themeColor = e.target.value; fab.style.backgroundColor = state.themeColor; document.getElementById('vc-gen-submit').style.backgroundColor = state.themeColor; document.getElementById('vc-f2-submit').style.backgroundColor = state.themeColor; };
+  document.getElementById('vc-admin-q').oninput = (e) => { state.customQuestion = e.target.value; document.getElementById('vc-q-label').innerText = state.customQuestion; };
+  document.getElementById('vc-admin-save').onclick = (e) => { const b = e.target; b.innerText='✅ Saved!'; setTimeout(()=>b.innerText='Save Changes', 2000); };
+
+  // Nudge Attachment
+  function toggleAdminNudgeMode() {
+    adminState.isAttachingNudge = !adminState.isAttachingNudge;
+    const btn = document.getElementById('vc-admin-nudge-btn');
+    if (adminState.isAttachingNudge) { btn.innerHTML = '🛑 Cancel Nudge'; btn.style.background = '#ef4444'; document.body.addEventListener('mouseover', handleHover); document.body.addEventListener('click', handleClick, true); } 
+    else { btn.innerHTML = '🎯 Attach Smart Nudge'; btn.style.background = '#3b82f6'; if (state.hoveredElement) { state.hoveredElement.style.outline = state.originalOutline; state.hoveredElement = null; } document.body.removeEventListener('mouseover', handleHover); document.body.removeEventListener('click', handleClick, true); }
+  }
+  document.getElementById('vc-admin-nudge-btn').addEventListener('click', toggleAdminNudgeMode);
 
 });
 </script>
